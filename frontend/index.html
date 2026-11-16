@@ -1,0 +1,1392 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>GroupBond</title>
+<meta name="description" content="GroupBond: shared-liability bonds for sales made inside Telegram, WhatsApp and Discord groups, with AI-validator dispute rulings on GenLayer.">
+<meta name="theme-color" content="#ECEFF3" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0C0F14" media="(prefers-color-scheme: dark)">
+<script>try{var t=localStorage.getItem("groupbond.theme");if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&display=swap">
+<style>
+:root{
+  --ground:#ECEFF3; --surface:#FFFFFF; --surface-2:#F5F7F9; --sunken:#E2E6EB;
+  --ink:#131B24; --ink-2:#435060; --ink-3:#5B6775; --line:#D5DBE2; --line-strong:#B4BDC8;
+  --sig:#3F3FB5; --sig-soft:#E6E6F8; --primary:#3F3FB5; --primary-hover:#302F94; --on-primary:#FFFFFF;
+  --pos:#166239; --pos-soft:#E0F0E6; --warn:#7F5300; --warn-soft:#FAEFD6;
+  --neg:#9E2A20; --neg-soft:#FAE6E3; --info:#2B4570; --info-soft:#E3E9F3; --mute-soft:#E7EAEE;
+  --focus:#3F3FB5;
+  --r-sm:6px; --r-md:10px; --r-lg:14px; --r-pill:999px;
+  --sh-raise:0 1px 2px rgba(19,27,36,.05),0 8px 22px -14px rgba(19,27,36,.2);
+  --sh-overlay:0 28px 70px -18px rgba(19,27,36,.42);
+  --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:20px; --s6:24px; --s8:32px; --s10:40px; --s12:48px;
+  --font:"Public Sans",system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --t-xs:12.5px; --t-sm:14px; --t-md:16px; --t-lg:18px; --t-xl:21px; --t-2xl:26px;
+  --top-h:56px; --nav-h:62px; --side-w:248px;
+  --ease:cubic-bezier(.2,.7,.2,1);
+  color-scheme:light;
+}
+:root[data-theme="dark"]{
+  --ground:#0C0F14; --surface:#151A21; --surface-2:#1A2029; --sunken:#090C10;
+  --ink:#E8ECF2; --ink-2:#AEB8C4; --ink-3:#8D98A6; --line:#262E39; --line-strong:#38424F;
+  --sig:#9EA3FF; --sig-soft:#20224A; --primary:#9EA3FF; --primary-hover:#B7BBFF; --on-primary:#0E0F2A;
+  --pos:#6FD39A; --pos-soft:#13301F; --warn:#EDB95C; --warn-soft:#352812;
+  --neg:#F48E82; --neg-soft:#3A1C19; --info:#9DB7E6; --info-soft:#1A2538; --mute-soft:#222A34;
+  --focus:#9EA3FF;
+  --sh-raise:0 1px 2px rgba(0,0,0,.35),0 10px 26px -14px rgba(0,0,0,.7);
+  --sh-overlay:0 28px 70px -18px rgba(0,0,0,.8);
+  color-scheme:dark;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#0C0F14; --surface:#151A21; --surface-2:#1A2029; --sunken:#090C10;
+    --ink:#E8ECF2; --ink-2:#AEB8C4; --ink-3:#8D98A6; --line:#262E39; --line-strong:#38424F;
+    --sig:#9EA3FF; --sig-soft:#20224A; --primary:#9EA3FF; --primary-hover:#B7BBFF; --on-primary:#0E0F2A;
+    --pos:#6FD39A; --pos-soft:#13301F; --warn:#EDB95C; --warn-soft:#352812;
+    --neg:#F48E82; --neg-soft:#3A1C19; --info:#9DB7E6; --info-soft:#1A2538; --mute-soft:#222A34;
+    --focus:#9EA3FF;
+    --sh-raise:0 1px 2px rgba(0,0,0,.35),0 10px 26px -14px rgba(0,0,0,.7);
+    --sh-overlay:0 28px 70px -18px rgba(0,0,0,.8);
+    color-scheme:dark;
+  }
+}
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%;overflow-x:clip}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--font);font-size:var(--t-md);line-height:1.55;-webkit-font-smoothing:antialiased;min-height:100vh;overflow-x:hidden}
+h1,h2,h3,h4{margin:0;line-height:1.25;letter-spacing:-.012em;font-weight:700}
+h1{font-size:var(--t-2xl)} h2{font-size:var(--t-xl)} h3{font-size:var(--t-lg)} h4{font-size:var(--t-md)}
+p{margin:0}
+a{color:inherit}
+button,input,select,textarea{font:inherit;color:inherit}
+svg{flex:none}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px;border-radius:4px}
+.sr{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.skip{position:fixed;left:8px;top:-60px;z-index:100;background:var(--primary);color:var(--on-primary);padding:10px 14px;border-radius:var(--r-sm);text-decoration:none;font-weight:600}
+.skip:focus{top:8px}
+svg.ic{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+
+.topbar{position:sticky;top:0;z-index:40;height:var(--top-h);display:flex;align-items:center;gap:var(--s3);padding:0 var(--s4);background:color-mix(in srgb,var(--ground) 90%,transparent);backdrop-filter:saturate(1.4) blur(10px);-webkit-backdrop-filter:saturate(1.4) blur(10px);border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none;font-weight:700;font-size:17px;letter-spacing:-.02em;min-height:44px;flex:none}
+.mark{width:28px;height:28px;display:block}
+.grow{flex:1;min-width:0}
+.env{font-size:var(--t-xs);font-weight:600;padding:2px 9px;border-radius:var(--r-pill);border:1px solid var(--line-strong);color:var(--ink-2);white-space:nowrap}
+@media (max-width:479px){.topbar .env{display:none}}
+.iconbtn{width:40px;height:40px;display:grid;place-items:center;border:1px solid var(--line-strong);background:var(--surface);color:var(--ink-2);border-radius:var(--r-sm);cursor:pointer;flex:none}
+.iconbtn:hover{color:var(--ink);border-color:var(--ink-3)}
+.walletbtn{display:inline-flex;align-items:center;gap:8px;min-height:40px;min-width:0;max-width:56vw;padding:0 12px;border:1px solid var(--line-strong);background:var(--surface);border-radius:var(--r-sm);font-size:var(--t-sm);font-weight:600;cursor:pointer}
+.walletbtn:hover{border-color:var(--ink-3)}
+.walletbtn .lbl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.walletbtn .dot{width:8px;height:8px;border-radius:50%;background:var(--ink-3);flex:none}
+.walletbtn.on .dot{background:var(--pos)} .walletbtn.warn .dot{background:var(--warn)}
+.banner{display:flex;gap:var(--s3);align-items:center;flex-wrap:wrap;padding:10px var(--s4);background:var(--warn-soft);border-bottom:1px solid var(--line);font-size:var(--t-sm)}
+
+nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:40;background:var(--surface);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+nav.tabs ul{list-style:none;margin:0;padding:4px 6px;display:grid;grid-template-columns:repeat(5,1fr);gap:2px}
+nav.tabs a.tab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-height:var(--nav-h);padding:6px 2px;border-radius:var(--r-md);text-decoration:none;color:var(--ink-3);font-size:12px;font-weight:600}
+nav.tabs a.tab[aria-current="page"]{color:var(--ink)}
+nav.tabs a.tab[aria-current="page"] svg{color:var(--sig)}
+nav.tabs .side-brand,nav.tabs .side-foot{display:none}
+main{padding:var(--s5) var(--s4) calc(var(--nav-h) + var(--s10) + env(safe-area-inset-bottom));max-width:1180px;margin:0 auto;min-height:70vh}
+main:focus{outline:none}
+footer.foot{max-width:1180px;margin:0 auto;padding:0 var(--s4) calc(var(--nav-h) + var(--s6));font-size:var(--t-xs);color:var(--ink-3)}
+footer.foot p+p{margin-top:4px}
+@media (min-width:1024px){
+  body{padding-left:var(--side-w)}
+  .topbar .brand{display:none}
+  nav.tabs{top:0;right:auto;width:var(--side-w);bottom:0;border-top:0;border-right:1px solid var(--line);background:var(--surface-2);padding:var(--s6) var(--s4);display:flex;flex-direction:column;gap:var(--s6);overflow:auto}
+  nav.tabs .side-brand{display:flex}
+  nav.tabs ul{display:grid;grid-template-columns:1fr;gap:2px;padding:0}
+  nav.tabs a.tab{flex-direction:row;justify-content:flex-start;gap:12px;min-height:44px;padding:0 12px;font-size:var(--t-sm);color:var(--ink-2)}
+  nav.tabs a.tab:hover{background:var(--mute-soft);color:var(--ink)}
+  nav.tabs a.tab[aria-current="page"]{background:var(--surface);color:var(--ink);box-shadow:inset 0 0 0 1px var(--line-strong)}
+  nav.tabs .side-foot{display:block;margin-top:auto;font-size:var(--t-xs);color:var(--ink-3)}
+  main{padding:var(--s8) var(--s10) var(--s12)}
+  footer.foot{padding:0 var(--s10) var(--s8)}
+}
+
+.stack>*+*{margin-top:var(--s4)} .stack-lg>*+*{margin-top:var(--s6)}
+.row{display:flex;align-items:center;gap:var(--s3);min-width:0} .between{justify-content:space-between} .wrap{flex-wrap:wrap}
+.muted{color:var(--ink-2)} .small{font-size:var(--t-sm)} .xs{font-size:var(--t-xs);color:var(--ink-3)}
+.num{font-variant-numeric:tabular-nums}
+.addr{word-break:break-all}
+.break{overflow-wrap:anywhere}
+.measure{max-width:62ch}
+.pagehead{display:grid;gap:var(--s2);margin-bottom:var(--s6)}
+.pagehead p{color:var(--ink-2);max-width:62ch}
+.crumb{display:inline-flex;align-items:center;gap:6px;min-height:44px;color:var(--ink-2);text-decoration:none;font-size:var(--t-sm);font-weight:600}
+.crumb:hover{color:var(--ink)}
+.section{margin-top:var(--s8)}
+.section>h2{font-size:var(--t-xl);margin-bottom:var(--s3)}
+.sechead{display:flex;align-items:center;justify-content:space-between;gap:var(--s3);margin-bottom:var(--s3)}
+
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:var(--s5);box-shadow:var(--sh-raise);min-width:0}
+.panel h2,.panel h3{margin-bottom:var(--s3)}
+@media (max-width:420px){.panel{padding:var(--s4)}}
+.inset{background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r-md);padding:var(--s4)}
+.callout{border-left:3px solid var(--sig);background:var(--sig-soft);padding:var(--s3) var(--s4);border-radius:0 var(--r-md) var(--r-md) 0;font-size:var(--t-sm)}
+.callout.warn{border-color:var(--warn);background:var(--warn-soft)} .callout.bad{border-color:var(--neg);background:var(--neg-soft)} .callout.ok{border-color:var(--pos);background:var(--pos-soft)}
+.cols{display:grid;gap:var(--s5);grid-template-columns:minmax(0,1fr)}
+@media (min-width:900px){.cols{grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);align-items:start}.cols .sticky{position:sticky;top:76px}}
+@media (max-width:899px){.cols>.sticky{order:-1}}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 18px;border-radius:var(--r-sm);border:1px solid transparent;font-weight:600;font-size:15px;cursor:pointer;text-decoration:none;text-align:center;line-height:1.25;transition:background-color .15s var(--ease),border-color .15s var(--ease),color .15s var(--ease)}
+.btn svg{width:18px;height:18px}
+.btn-primary{background:var(--primary);color:var(--on-primary)} .btn-primary:hover{background:var(--primary-hover)}
+.btn-secondary{background:var(--surface);color:var(--ink);border-color:var(--line-strong)} .btn-secondary:hover{background:var(--surface-2);border-color:var(--ink-3)}
+.btn-ghost{background:transparent;color:var(--ink-2)} .btn-ghost:hover{background:var(--mute-soft);color:var(--ink)}
+.btn-danger{background:var(--surface);color:var(--neg);border-color:color-mix(in srgb,var(--neg) 45%,var(--line))} .btn-danger:hover{background:var(--neg-soft)}
+.btn.block{width:100%} .btn.sm{min-height:40px;padding:0 12px;font-size:var(--t-sm)}
+.btn:active{transform:translateY(1px)}
+.btn[disabled]{opacity:.55;cursor:not-allowed;transform:none}
+.spin{display:inline-block;width:16px;height:16px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.actions{display:flex;gap:var(--s3);flex-wrap:wrap}
+.actions>.btn{flex:1 1 180px}
+
+.field{display:block} .field+.field{margin-top:var(--s4)}
+.field>label,.label{display:block;font-size:var(--t-sm);font-weight:600;margin-bottom:6px}
+.req{color:var(--neg);margin-left:2px}
+.input{width:100%;min-height:44px;padding:10px 12px;color:var(--ink);background:var(--surface);border:1px solid var(--line-strong);border-radius:var(--r-sm);appearance:none;-webkit-appearance:none}
+.input:hover{border-color:var(--ink-3)}
+.input:focus{outline:none;border-color:var(--sig);box-shadow:0 0 0 3px color-mix(in srgb,var(--sig) 24%,transparent)}
+.input[aria-invalid="true"]{border-color:var(--neg)}
+textarea.input{min-height:96px;resize:vertical}
+.help{font-size:var(--t-xs);color:var(--ink-3);margin-top:6px}
+.err{font-size:var(--t-xs);color:var(--neg);margin-top:6px;font-weight:600}
+.err:empty{display:none}
+.grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:var(--s3)}
+@media (max-width:479px){.grid2{grid-template-columns:minmax(0,1fr)}}
+.seg{display:flex;flex-wrap:wrap;gap:var(--s2)}
+.pick{min-height:40px;padding:0 14px;border-radius:var(--r-pill);border:1px solid var(--line-strong);background:var(--surface);color:var(--ink-2);font-size:var(--t-sm);font-weight:600;cursor:pointer}
+.pick:hover{border-color:var(--ink-3);color:var(--ink)}
+.pick[aria-pressed="true"]{background:var(--primary);border-color:var(--primary);color:var(--on-primary)}
+.scroller{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:2px;margin:0 0 var(--s4)}
+.scroller::-webkit-scrollbar{display:none}
+.scroller .pick{flex:none}
+
+.chip{display:inline-flex;align-items:center;gap:6px;min-height:26px;padding:0 10px;border-radius:var(--r-pill);font-size:12.5px;font-weight:600;white-space:nowrap;background:var(--mute-soft);color:var(--ink-2)}
+.chip::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+.chip.plain::before{display:none}
+.chip.pos{background:var(--pos-soft);color:var(--pos)} .chip.warn{background:var(--warn-soft);color:var(--warn)}
+.chip.neg{background:var(--neg-soft);color:var(--neg)} .chip.info{background:var(--info-soft);color:var(--info)} .chip.sig{background:var(--sig-soft);color:var(--sig)}
+
+.kv{display:grid;grid-template-columns:minmax(110px,38%) minmax(0,1fr);gap:10px 16px;margin:0}
+.kv dt{color:var(--ink-3);font-size:var(--t-sm)} .kv dd{margin:0;min-width:0;font-size:var(--t-sm);font-weight:500;overflow-wrap:anywhere}
+@media (max-width:420px){.kv{grid-template-columns:1fr;gap:2px}.kv dd{margin-bottom:10px}}
+
+.strip{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden}
+.stat{padding:var(--s4) var(--s5);display:grid;gap:2px;min-width:0;border-top:1px solid var(--line)}
+.stat:nth-child(-n+2){border-top:0} .stat:nth-child(even){border-left:1px solid var(--line)}
+.stat b{font-size:clamp(20px,5vw,26px);font-weight:700;letter-spacing:-.02em}
+.stat span{font-size:var(--t-sm);color:var(--ink-3)}
+.stat .sub{font-size:var(--t-xs);font-weight:600;color:var(--sig);min-height:18px}
+@media (min-width:720px){.strip{grid-template-columns:repeat(4,minmax(0,1fr))}.stat{border-top:0}.stat+.stat{border-left:1px solid var(--line)}}
+
+.list{list-style:none;margin:0;padding:0;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden}
+.list>li+li{border-top:1px solid var(--line)}
+.item{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 14px;align-items:center;padding:var(--s4) var(--s5);text-decoration:none;min-height:64px}
+a.item:hover{background:var(--surface-2)}
+.item .title{font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.item .meta{grid-column:1 / -1;display:flex;flex-wrap:wrap;gap:2px 14px;color:var(--ink-3);font-size:var(--t-sm)}
+.item .end{text-align:right;display:grid;gap:4px;justify-items:end}
+.cards{display:grid;gap:var(--s3);grid-template-columns:minmax(0,1fr)}
+@media (min-width:720px){.cards{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (min-width:1100px){.cards.three{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.card{--edge:var(--line-strong);display:grid;gap:8px;padding:var(--s4) var(--s5);background:var(--surface);border:1px solid var(--line);border-top:3px solid var(--edge);border-radius:var(--r-lg);text-decoration:none;color:var(--ink);min-width:0;box-shadow:var(--sh-raise)}
+.card:hover{border-color:var(--line-strong);border-top-color:var(--edge)}
+.card .t{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.card .m{display:flex;flex-wrap:wrap;gap:2px 12px;font-size:var(--t-sm);color:var(--ink-3)}
+.card.e-pos{--edge:var(--pos)} .card.e-warn{--edge:var(--warn)} .card.e-neg{--edge:var(--neg)} .card.e-sig{--edge:var(--sig)} .card.e-info{--edge:var(--info)}
+.empty{padding:var(--s8) var(--s4);text-align:center;color:var(--ink-2)}
+.empty h3{color:var(--ink);margin-bottom:6px}
+.empty .btn{margin-top:var(--s4)}
+.skel{border-radius:var(--r-md);background:var(--sunken);min-height:18px;margin-bottom:10px;animation:pulse 1.2s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.55}}
+
+.hero{display:grid;gap:var(--s5);grid-template-columns:minmax(0,1fr);background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:var(--s6) var(--s5);overflow:hidden;box-shadow:var(--sh-raise)}
+.hero h1{font-size:clamp(26px,5.6vw,36px);letter-spacing:-.028em;line-height:1.12;max-width:20ch;margin-top:var(--s3)}
+.hero .lede{color:var(--ink-2);max-width:54ch;margin-top:var(--s3)}
+.hero .actions{margin-top:var(--s5);max-width:420px}
+.hero-art{display:none}
+.hero .strip{grid-column:1 / -1}
+@media (min-width:768px){.hero{grid-template-columns:minmax(0,1fr) 280px;padding:var(--s8);align-items:center}.hero-art{display:block}}
+.live{display:inline-flex;align-items:center;gap:8px;padding:4px 12px 4px 10px;border:1px solid var(--line-strong);border-radius:var(--r-pill);font-size:var(--t-xs);color:var(--ink-2);background:var(--surface-2)}
+.live i{width:8px;height:8px;border-radius:50%;background:var(--pos)}
+.live b{color:var(--ink)}
+.live.off i{background:var(--warn)}
+.art-in{transform-box:fill-box;transform-origin:center;animation:artIn .6s .15s var(--ease) both}
+@keyframes artIn{0%{opacity:0;transform:translateY(10px) scale(.96)}100%{opacity:1;transform:none}}
+
+.feed{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--sh-raise);overflow:hidden}
+.feed-head{display:flex;align-items:center;justify-content:space-between;gap:var(--s3);padding:var(--s4) var(--s5);border-bottom:1px solid var(--line)}
+.feed-head h2{font-size:var(--t-md);margin:0}
+.feed-head .src{font-size:var(--t-xs);font-weight:600;color:var(--pos);display:inline-flex;align-items:center;gap:6px}
+.feed-head .src::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.feed ol{list-style:none;margin:0;padding:0}
+.feed li+li{border-top:1px solid var(--line)}
+.feed li a{display:grid;grid-template-columns:34px minmax(0,1fr) auto;gap:var(--s3);align-items:center;padding:10px var(--s5);text-decoration:none;min-height:58px}
+.feed li a:hover{background:var(--surface-2)}
+.ev-i{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:var(--mute-soft);color:var(--ink-2)}
+.ev-i.pos{background:var(--pos-soft);color:var(--pos)} .ev-i.neg{background:var(--neg-soft);color:var(--neg)} .ev-i.warn{background:var(--warn-soft);color:var(--warn)} .ev-i.sig{background:var(--sig-soft);color:var(--sig)}
+.ev-t{display:block;font-size:var(--t-sm);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ev-s{display:block;font-size:var(--t-xs);color:var(--ink-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ev-a{font-size:var(--t-xs);color:var(--ink-3);white-space:nowrap}
+.books{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:var(--s3) var(--s5);border-top:1px dashed var(--line-strong);background:var(--surface-2);font-size:var(--t-sm)}
+.books b{color:var(--pos);display:inline-flex;align-items:center;gap:6px} .books.off b{color:var(--warn)}
+
+.roles{display:grid;gap:var(--s3);grid-template-columns:minmax(0,1fr)}
+@media (min-width:768px){.roles{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.role-card{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:14px;align-items:center;min-height:88px;padding:var(--s4);border-radius:var(--r-lg);border:1px solid var(--line);background:var(--surface);text-decoration:none;box-shadow:var(--sh-raise);transition:border-color .15s var(--ease)}
+.role-card:hover{border-color:var(--sig)}
+.role-ic{display:grid;place-items:center;width:48px;height:48px;border-radius:12px;background:var(--sig-soft);color:var(--sig)}
+.role-ic svg{width:24px;height:24px}
+.role-text{display:grid;gap:3px;min-width:0}
+.role-text b{font-size:16px;line-height:1.3} .role-text span{font-size:var(--t-sm);color:var(--ink-2)}
+.role-go{width:20px;height:20px;color:var(--ink-3);transition:transform .15s var(--ease),color .15s}
+.role-card:hover .role-go{color:var(--sig);transform:translateX(2px)}
+
+.sentence{font-size:clamp(17px,2.6vw,21px);font-weight:500;line-height:2.3;color:var(--ink-2);margin:0}
+.sentence .pick{font-size:.88em;margin:0 2px;vertical-align:baseline;min-height:40px}
+
+.how{border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface)}
+.how summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:52px;padding:0 var(--s5);font-weight:600}
+.how summary::-webkit-details-marker{display:none}
+.how summary svg{width:18px;height:18px;transition:transform .2s var(--ease);color:var(--ink-3)}
+.how[open] summary svg{transform:rotate(180deg)}
+.how ol{margin:0;padding:0 var(--s5) var(--s5);list-style:none;display:grid;gap:var(--s4);counter-reset:step}
+@media (min-width:768px){.how ol{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.how li{counter-increment:step;display:grid;gap:4px;font-size:var(--t-sm);color:var(--ink-2)}
+.how li b{color:var(--ink);font-size:15px}
+.how li b::before{content:counter(step);display:inline-grid;place-items:center;width:22px;height:22px;margin-right:8px;border-radius:50%;background:var(--sig-soft);color:var(--sig);font-size:12px}
+
+.split{display:grid;grid-template-columns:minmax(0,1fr);gap:6px}
+.bar{display:flex;height:10px;border-radius:999px;overflow:hidden;background:var(--sunken)}
+.bar i{display:block;height:100%}
+.bar .v{background:var(--sig)} .bar .g{background:var(--warn)}
+.legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:var(--t-xs);color:var(--ink-3)}
+.legend b{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px}
+
+.timeline{list-style:none;margin:0;padding:0}
+.timeline li{position:relative;display:grid;grid-template-columns:20px minmax(0,1fr);gap:var(--s3);padding-bottom:var(--s4)}
+.timeline li:last-child{padding-bottom:0}
+.timeline li::before{content:"";position:absolute;left:9px;top:22px;bottom:0;width:2px;background:var(--line)}
+.timeline li:last-child::before{display:none}
+.timeline .b{width:20px;height:20px;border-radius:50%;border:2px solid var(--line-strong);background:var(--surface);margin-top:2px;z-index:1}
+.timeline li.done .b{background:var(--pos);border-color:var(--pos)}
+.timeline li.now .b{border-color:var(--sig);box-shadow:0 0 0 4px var(--sig-soft)}
+.timeline small{display:block;color:var(--ink-3);font-size:var(--t-xs)}
+.timeline li:not(.done):not(.now){color:var(--ink-3)}
+
+.tx{margin-top:var(--s4);border:1px solid var(--line);border-radius:var(--r-md);padding:var(--s3) var(--s4);font-size:var(--t-sm);background:var(--surface)}
+.tx ol{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.tx li{display:grid;grid-template-columns:18px minmax(0,1fr);gap:10px;align-items:start;color:var(--ink-3)}
+.tx li .b{width:18px;height:18px;border-radius:50%;border:2px solid var(--line-strong);margin-top:2px}
+.tx li.done{color:var(--ink)} .tx li.done .b{background:var(--pos);border-color:var(--pos)}
+.tx li.now{color:var(--ink);font-weight:600} .tx li.now .b{border-color:var(--sig);border-right-color:transparent;animation:spin .9s linear infinite}
+.tx li.fail{color:var(--neg);font-weight:600} .tx li.fail .b{background:var(--neg);border-color:var(--neg)}
+.tx .msg{margin-top:var(--s3);padding-top:var(--s3);border-top:1px solid var(--line);color:var(--ink-2);overflow-wrap:anywhere}
+.tx .msg:empty{display:none}
+.tx.bad{border-color:color-mix(in srgb,var(--neg) 45%,var(--line));background:var(--neg-soft)}
+.tx.good{border-color:color-mix(in srgb,var(--pos) 45%,var(--line))}
+
+.ev{border:1px solid var(--line);border-radius:var(--r-md);padding:var(--s3) var(--s4);background:var(--surface)}
+.ev+.ev{margin-top:var(--s2)}
+.ev .who{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:var(--t-xs);color:var(--ink-3);margin-bottom:4px}
+
+dialog{border:0;padding:0;background:var(--surface);color:var(--ink);border-radius:var(--r-lg);box-shadow:var(--sh-overlay);width:min(520px,calc(100vw - 24px));max-height:calc(100dvh - 24px)}
+dialog::backdrop{background:rgba(10,14,20,.55)}
+dialog .dlg{padding:var(--s6);overflow:auto;max-height:calc(100dvh - 24px)}
+dialog .dlg-head{display:flex;align-items:flex-start;justify-content:space-between;gap:var(--s3);margin-bottom:var(--s4)}
+dialog .x{width:44px;height:44px;margin:-10px -10px 0 0;border:0;background:transparent;color:var(--ink-2);border-radius:var(--r-sm);cursor:pointer;display:grid;place-items:center;flex:none}
+dialog .x:hover{background:var(--mute-soft)}
+@media (max-width:599px){dialog{width:100vw;max-width:100vw;margin:auto 0 0;border-radius:var(--r-lg) var(--r-lg) 0 0;max-height:92dvh}dialog .dlg{padding:var(--s5) var(--s4) calc(var(--s5) + env(safe-area-inset-bottom))}}
+dialog[open]{animation:pop .2s var(--ease)}
+@keyframes pop{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+.option{display:block;width:100%;text-align:left;padding:var(--s4);border:1px solid var(--line-strong);border-radius:var(--r-md);background:var(--surface);cursor:pointer}
+.option:hover{border-color:var(--sig)}
+.option b{display:block} .option span{display:block;font-size:var(--t-sm);color:var(--ink-2);margin-top:2px}
+.option+.option{margin-top:var(--s2)}
+details.tune{margin-top:var(--s5);border-top:1px solid var(--line)}
+details.tune>summary{list-style:none;display:flex;align-items:center;justify-content:space-between;min-height:48px;cursor:pointer;font-weight:600}
+details.tune>summary::-webkit-details-marker{display:none}
+details.tune>summary::after{content:"";width:8px;height:8px;border-right:2px solid var(--ink-3);border-bottom:2px solid var(--ink-3);transform:rotate(45deg);margin-right:6px;transition:transform .2s var(--ease)}
+details.tune[open]>summary::after{transform:rotate(-135deg)}
+.toasts{position:fixed;left:0;right:0;bottom:calc(var(--nav-h) + 12px + env(safe-area-inset-bottom));z-index:90;display:grid;gap:8px;justify-items:center;padding:0 var(--s4);pointer-events:none}
+@media (min-width:1024px){.toasts{left:auto;right:24px;bottom:24px;justify-items:end}}
+.toast{pointer-events:auto;max-width:440px;background:var(--ink);color:var(--ground);padding:12px 14px;border-radius:var(--r-md);box-shadow:var(--sh-overlay);font-size:var(--t-sm);font-weight:500;animation:pop .2s var(--ease)}
+.toast.bad{background:var(--neg);color:#fff}
+@media (prefers-reduced-motion: reduce){*,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<a class="skip" href="#app">Skip to content</a>
+<header class="topbar">
+  <a class="brand" href="#/" aria-label="GroupBond home"><span id="brandMark"></span><span>GroupBond</span></a>
+  <span class="env" id="envBadge" hidden></span>
+  <span class="grow"></span>
+  <button class="iconbtn" id="themeBtn" type="button" aria-label="Switch theme"></button>
+  <button class="walletbtn" id="walletBtn" type="button" aria-haspopup="dialog"><span class="dot" aria-hidden="true"></span><span class="lbl" id="walletLbl">Connect wallet</span></button>
+</header>
+<div class="banner" id="netBanner" role="alert" hidden>
+  <span class="grow">Your wallet is on a different network. Transactions will fail until it uses GenLayer Studio.</span>
+  <button class="btn btn-secondary sm" type="button" id="switchNet">Switch network</button>
+</div>
+<nav class="tabs" aria-label="Main">
+  <a class="brand side-brand" href="#/" aria-label="GroupBond home"><span id="brandMark2"></span><span>GroupBond</span></a>
+  <ul id="tabs"></ul>
+  <div class="side-foot"><p>Contract</p><p class="addr" id="sideAddr">not set</p></div>
+</nav>
+<main id="app" tabindex="-1"></main>
+<footer class="foot">
+  <p>Contract <span class="addr" id="footAddr">not set</span> on GenLayer Studio.</p>
+  <p>GroupBond is a testnet demo. Validators are language models and can be wrong; a ruling is final in this version.</p>
+</footer>
+<dialog id="dlg" aria-labelledby="dlgTitle"><div class="dlg" id="dlgBody"></div></dialog>
+<div class="toasts" id="toasts" role="status" aria-live="polite"></div>
+<script type="module">
+import { createClient, createAccount } from "https://esm.sh/genlayer-js@latest";
+import { studionet } from "https://esm.sh/genlayer-js@latest/chains";
+
+const DEFAULT_CONTRACT_ADDRESS = "0x0000000000000000000000000000000000000000";
+const ZERO = "0x0000000000000000000000000000000000000000";
+const WEI = 1000000000000000000n;
+const NS = "groupbond";
+const $ = (id) => document.getElementById(id);
+
+/* ---------- DOM helpers: contract data only ever reaches the page as text ---------- */
+const SVGNS = "http://www.w3.org/2000/svg";
+const ICONS = {
+  home: ["M3 11l9-8 9 8", "M5 10v10h14V10"],
+  groups: ["M9 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6z", "M3 19c0-3 2.7-5 6-5s6 2 6 5", "M16 6.5a2.5 2.5 0 1 1 0 5", "M17 14.2c2.3.4 4 2 4 4.8"],
+  deals: ["M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"],
+  manage: ["M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z", "M9 12l2 2 4-4"],
+  user: ["M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8z", "M4 21c0-4 3.6-6 8-6s8 2 8 6"],
+  x: ["M6 6l12 12M18 6L6 18"],
+  copy: ["M9 9h11v11H9z", "M5 15H4V4h11v1"],
+  back: ["M15 6l-6 6 6 6"],
+  arrow: ["M5 12h14M13 6l6 6-6 6"],
+  down: ["M6 9l6 6 6-6"],
+  sun: ["M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10z", "M12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"],
+  moon: ["M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"],
+  check: ["M5 12l5 5 9-10"],
+  bag: ["M5 8h14l-1 12H6L5 8z", "M9 8V6a3 3 0 0 1 6 0v2"],
+  chat: ["M4 5h16v11H9l-5 4V5z"],
+  gavel: ["M14 4l6 6-3 3-6-6 3-3z", "M11 7L4 14l3 3 7-7", "M3 21h9"],
+  coin: ["M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z", "M12 7v10M9.5 9.5c.5-1 1.4-1.5 2.5-1.5 1.4 0 2.5.7 2.5 1.8s-1.1 1.5-2.5 1.8-2.5.7-2.5 1.8S10.6 16 12 16c1.1 0 2-.5 2.5-1.5"],
+  box: ["M3 7l9-4 9 4v10l-9 4-9-4V7z", "M3 7l9 4 9-4M12 11v10"],
+  clock: ["M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z", "M12 7v5l3 2"],
+  alert: ["M12 3l10 18H2L12 3z", "M12 10v5M12 18h.01"],
+  plus: ["M12 5v14M5 12h14"],
+};
+function icon(name, size) {
+  const svg = document.createElementNS(SVGNS, "svg");
+  svg.setAttribute("viewBox", "0 0 24 24"); svg.setAttribute("class", "ic"); svg.setAttribute("aria-hidden", "true");
+  if (size) { svg.style.width = size + "px"; svg.style.height = size + "px"; }
+  for (const d of ICONS[name] || []) { const p = document.createElementNS(SVGNS, "path"); p.setAttribute("d", d); svg.appendChild(p); }
+  return svg;
+}
+function svgEl(tag, attrs, ...kids) {
+  const el = document.createElementNS(SVGNS, tag);
+  for (const [k, v] of Object.entries(attrs || {})) el.setAttribute(k, v);
+  kids.forEach((k) => el.appendChild(k));
+  return el;
+}
+function markSvg() {
+  return svgEl("svg", { viewBox: "0 0 28 28", class: "mark", "aria-hidden": "true" },
+    svgEl("rect", { width: "28", height: "28", rx: "7", fill: "var(--sig)" }),
+    svgEl("path", { d: "M6 8.5h11a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2H11l-3.5 3v-3H6a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2z", fill: "none", stroke: "var(--on-primary)", "stroke-width": "1.8", "stroke-linejoin": "round", transform: "translate(1 -1)" }),
+    svgEl("path", { d: "M17 12.2l1.8 1.8 3.4-3.6", fill: "none", stroke: "var(--on-primary)", "stroke-width": "2", "stroke-linecap": "round", "stroke-linejoin": "round", transform: "translate(0 5)" }));
+}
+function heroArt() {
+  const svg = svgEl("svg", { viewBox: "0 0 280 220", class: "hero-svg", role: "img", "aria-label": "Group chat bubbles backed by a bond shield", style: "width:100%;height:auto;display:block" });
+  const g = svgEl("g", { class: "art-in" });
+  g.append(
+    svgEl("rect", { x: "14", y: "14", width: "252", height: "192", rx: "16", fill: "var(--surface-2)", stroke: "var(--line-strong)", "stroke-width": "1.5" }),
+    svgEl("rect", { x: "34", y: "36", width: "130", height: "32", rx: "12", fill: "var(--surface)", stroke: "var(--ink-3)", "stroke-width": "1.4" }),
+    svgEl("path", { d: "M46 52h70", stroke: "var(--line-strong)", "stroke-width": "4", "stroke-linecap": "round" }),
+    svgEl("rect", { x: "116", y: "78", width: "130", height: "32", rx: "12", fill: "var(--sig-soft)", stroke: "var(--sig)", "stroke-width": "1.4" }),
+    svgEl("path", { d: "M130 94h66", stroke: "var(--sig)", "stroke-width": "4", "stroke-linecap": "round" }),
+    svgEl("rect", { x: "34", y: "120", width: "100", height: "32", rx: "12", fill: "var(--surface)", stroke: "var(--ink-3)", "stroke-width": "1.4" }),
+    svgEl("path", { d: "M46 136h52", stroke: "var(--line-strong)", "stroke-width": "4", "stroke-linecap": "round" }),
+    svgEl("path", { d: "M196 118l30 11v22c0 17-12 27-30 32-18-5-30-15-30-32v-22l30-11z", fill: "var(--surface)", stroke: "var(--sig)", "stroke-width": "3.5", "stroke-linejoin": "round" }),
+    svgEl("path", { d: "M182 150l10 10 20-22", fill: "none", stroke: "var(--sig)", "stroke-width": "4", "stroke-linecap": "round", "stroke-linejoin": "round" }));
+  svg.appendChild(g);
+  return svg;
+}
+function h(tag, props, ...kids) {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(props || {})) {
+    if (v === undefined || v === null || v === false) continue;
+    if (k === "class") el.className = v;
+    else if (k === "text") el.textContent = v;
+    else if (k === "style") el.style.cssText = v;
+    else if (k.startsWith("on")) el.addEventListener(k.slice(2), v);
+    else el.setAttribute(k, v === true ? "" : v);
+  }
+  for (const kid of kids.flat(3)) {
+    if (kid === null || kid === undefined || kid === false) continue;
+    el.appendChild(typeof kid === "string" || typeof kid === "number" ? document.createTextNode(String(kid)) : kid);
+  }
+  return el;
+}
+const clear = (el) => { while (el.firstChild) el.removeChild(el.firstChild); return el; };
+const put = (el, ...kids) => { clear(el); for (const k of kids.flat(3)) if (k !== null && k !== undefined && k !== false) el.append(k); return el; };
+const short = (a) => (a ? a.slice(0, 6) + "…" + a.slice(-4) : "-");
+const same = (a, b) => !!a && !!b && String(a).toLowerCase() === String(b).toLowerCase();
+const nowSec = () => Math.floor(Date.now() / 1000);
+function toast(text, bad) { const t = h("div", { class: "toast" + (bad ? " bad" : ""), text }); $("toasts").appendChild(t); setTimeout(() => t.remove(), 4500); }
+async function copyText(text) { try { await navigator.clipboard.writeText(text); toast("Copied"); } catch (e) { toast("Copying is not available in this browser", true); } }
+
+/* ---------- numbers, GEN and dates ---------- */
+function genToWei(s) {
+  const t = String(s).trim();
+  if (!t) return null;
+  const p = t.split(".");
+  if (p.length > 2) return null;
+  const whole = p[0] || "0", frac = p[1] || "";
+  if (!/^\d+$/.test(whole) || (frac && !/^\d+$/.test(frac)) || frac.length > 18) return null;
+  try { return BigInt(whole) * WEI + BigInt(frac.padEnd(18, "0") || "0"); } catch (e) { return null; }
+}
+function genStr(w, dp = 3) {
+  let wei;
+  try { wei = BigInt(w); } catch (e) { return String(w); }
+  const neg = wei < 0n; if (neg) wei = -wei;
+  const frac = (wei % WEI).toString().padStart(18, "0").slice(0, dp).replace(/0+$/, "");
+  const whole = (wei / WEI).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  return (neg ? "-" : "") + whole + (frac ? "." + frac : "");
+}
+const gen = (w, dp) => genStr(w, dp) + " GEN";
+const fmtEpoch = (e) => { if (!Number(e)) return "-"; try { return new Date(Number(e) * 1000).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" }); } catch (x) { return String(e); } };
+function dur(sec) {
+  sec = Math.max(0, Math.floor(sec));
+  const d = Math.floor(sec / 86400), hh = Math.floor((sec % 86400) / 3600), mm = Math.floor((sec % 3600) / 60);
+  if (d > 0) return `${d}d ${hh}h`;
+  if (hh > 0) return `${hh}h ${mm}m`;
+  if (mm > 0) return `${mm} min`;
+  return `${sec}s`;
+}
+function timeAgo(epoch) {
+  const e = Number(epoch);
+  if (!e) return "";
+  const d = nowSec() - e;
+  if (d < 60) return "just now";
+  if (d < 3600) return Math.floor(d / 60) + "m ago";
+  if (d < 86400) return Math.floor(d / 3600) + "h ago";
+  if (d < 86400 * 30) return Math.floor(d / 86400) + "d ago";
+  return new Date(e * 1000).toLocaleDateString(undefined, { day: "numeric", month: "short" });
+}
+const safeUrl = (u) => (typeof u === "string" && /^https:\/\//.test(u) ? u : "");
+const linkOrText = (u) => (safeUrl(u) ? h("a", { href: u, target: "_blank", rel: "noopener noreferrer nofollow", text: u }) : h("span", { text: u || "-" }));
+const PLAT = { telegram: "Telegram", whatsapp: "WhatsApp", discord: "Discord", signal: "Signal", other: "Other" };
+
+/* ---------- status vocabulary ---------- */
+function dealTone(d) {
+  const s = d.status;
+  if (s === "COMPLETED") return ["pos", "Completed"];
+  if (s === "RESOLVED") return ({ SELLER_WINS: ["pos", "Vendor won"], BUYER_WINS: ["neg", "Buyer won"], SPLIT: ["warn", "Split"], INCONCLUSIVE: ["plain", "Inconclusive"], STALLED: ["plain", "Closed, stalled"] })[d.outcome] || ["plain", "Resolved"];
+  return ({ OPEN: ["info", "Open"], PAYMENT_CLAIMED: ["warn", "Payment claimed"], ACTIVE: ["sig", "Bound"], DELIVERED: ["info", "Delivered"], DISPUTED: ["neg", "In dispute"], REOPENED: ["warn", "Re-review"], CHALLENGED: ["warn", "Challenged"], PAYOUT_PENDING: ["warn", "Payout pending"], CANCELLED: ["plain", "Cancelled"], EXPIRED: ["plain", d.outcome === "LAPSED" ? "Lapsed" : "Expired"] })[s] || ["plain", s];
+}
+const chip = (tone, text) => h("span", { class: "chip " + tone, text });
+const dealChip = (d) => chip(...dealTone(d));
+const vendorChip = (s) => chip(({ APPROVED: "pos", PENDING: "warn", SUSPENDED: "neg", REMOVED: "plain" })[s] || "plain", ({ APPROVED: "Approved", PENDING: "Awaiting approval", SUSPENDED: "Suspended", REMOVED: "Removed" })[s] || s);
+const edgeOf = (d) => "e-" + ({ pos: "pos", neg: "neg", warn: "warn", sig: "sig", info: "info", plain: "" })[dealTone(d)[0]];
+const isDone = (d) => ["COMPLETED", "RESOLVED", "CANCELLED", "EXPIRED"].includes(d.status);
+const REFUND_TEXT = {
+  invalid_slug: "The group address must be 3 to 30 characters: lowercase letters, digits and underscores.",
+  slug_taken: "That group address is already taken.",
+  already_admin: "This account already runs a group.",
+  already_vendor: "This account is already a vendor, so it cannot run a group.",
+  invalid_name: "The group name must be 3 to 60 characters.",
+  invalid_platform: "Choose a platform from the list.",
+  bad_url: "Links must start with https:// and point to a public host.",
+  pool_below_minimum: "The pool is below the minimum.",
+  unknown_group: "That group does not exist.",
+  invalid_handle: "The handle must be 3 to 30 characters: lowercase letters, digits, dots and underscores.",
+  already_registered: "This account is already registered as a vendor.",
+  admin_cannot_sell: "A group admin cannot also sell. Use another account.",
+  handle_taken: "That handle is already taken.",
+  bond_below_minimum: "The bond is below the minimum.",
+  not_registered: "This account is not a registered vendor.",
+  not_group_admin: "Only the group admin can add to the pool.",
+  no_value: "No GEN was sent.",
+  unknown_deal: "That deal does not exist.",
+  deal_not_open: "This deal is no longer open.",
+  offer_expired: "The offer has expired.",
+  vendor_cannot_buy_own_deal: "A vendor cannot buy their own deal.",
+  admin_cannot_buy_in_own_group: "The group admin cannot buy inside their own group.",
+  wrong_deposit: "The deposit must be exactly the amount shown.",
+  payment_ref_length: "The payment reference must be 5 to 300 characters.",
+  claim_was_rejected: "The vendor already rejected your claim on this deal.",
+  only_buyer: "Only the buyer of this deal can do that.",
+  not_disputable_now: "This deal cannot be disputed right now.",
+  claim_length: "The dispute text must be 10 to 1500 characters.",
+};
+
+/* ---------- contract address ---------- */
+const okAddr = (v) => /^0x[0-9a-fA-F]{40}$/.test(String(v || ""));
+function resolveContract() {
+  try { const q = new URLSearchParams(location.search).get("contract"); if (okAddr(q)) { try { localStorage.setItem(NS + ".contract", q); } catch (e) {} return q; } } catch (e) {}
+  try { const s = localStorage.getItem(NS + ".contract"); if (okAddr(s)) return s; } catch (e) {}
+  return DEFAULT_CONTRACT_ADDRESS;
+}
+const CONTRACT_ADDRESS = resolveContract();
+const hasContract = CONTRACT_ADDRESS !== ZERO;
+$("footAddr").textContent = hasContract ? CONTRACT_ADDRESS : "not set";
+$("sideAddr").textContent = hasContract ? CONTRACT_ADDRESS : "not set";
+$("brandMark").appendChild(markSvg());
+$("brandMark2").appendChild(markSvg());
+
+/* ---------- wallet and network ---------- */
+const readClient = createClient({ chain: studionet });
+let client = null, account = null, usingInjected = false, walletKind = "";
+const net = { ok: true };
+const RPC_URL = studionet.rpcUrls?.default?.http?.[0];
+const hexChainId = () => "0x" + Number(studionet.id).toString(16);
+async function checkChain() {
+  if (!usingInjected || !window.ethereum) { net.ok = true; drawNet(); return true; }
+  try { const cur = await window.ethereum.request({ method: "eth_chainId" }); net.ok = String(cur).toLowerCase() === hexChainId().toLowerCase(); } catch (e) { net.ok = true; }
+  drawNet();
+  return net.ok;
+}
+async function switchChain() {
+  try { await window.ethereum.request({ method: "wallet_switchEthereumChain", params: [{ chainId: hexChainId() }] }); }
+  catch (e) {
+    if (e?.code === 4001) throw e;
+    await window.ethereum.request({ method: "wallet_addEthereumChain", params: [{ chainId: hexChainId(), chainName: studionet.name || "GenLayer Studio",
+      nativeCurrency: studionet.nativeCurrency || { name: "GEN", symbol: "GEN", decimals: 18 }, rpcUrls: studionet.rpcUrls?.default?.http || [] }] });
+  }
+  return checkChain();
+}
+function drawNet() { $("netBanner").hidden = net.ok || !account; drawWallet(); }
+$("switchNet").addEventListener("click", async () => { try { if (await switchChain()) toast("Switched to GenLayer Studio"); } catch (e) { toast(explain(e), true); } });
+if (window.ethereum?.on) {
+  window.ethereum.on("chainChanged", () => checkChain());
+  window.ethereum.on("accountsChanged", (accs) => {
+    if (!usingInjected) return;
+    if (!accs || !accs.length) return disconnect();
+    account = accs[0]; client = createClient({ chain: studionet, account });
+    toast("Wallet account changed"); route();
+  });
+}
+function drawWallet() {
+  const btn = $("walletBtn");
+  btn.classList.toggle("on", !!account && net.ok);
+  btn.classList.toggle("warn", !!account && !net.ok);
+  const narrow = window.matchMedia && window.matchMedia("(max-width: 419px)").matches;
+  $("walletLbl").textContent = account ? (narrow ? account.slice(0, 4) + "…" + account.slice(-4) : short(account)) : narrow ? "Connect" : "Connect wallet";
+  btn.title = account ? (walletKind === "test" ? "Test session " : "") + account : "";
+  btn.setAttribute("aria-label", account ? "Wallet " + account + ", open wallet menu" : "Connect wallet");
+}
+async function rpc(method, params) {
+  if (!RPC_URL) return null;
+  try {
+    const res = await fetch(RPC_URL, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }) });
+    const body = await res.json();
+    return body && typeof body.result === "string" ? BigInt(body.result) : null;
+  } catch (e) { return null; }
+}
+const balanceOf = (addr) => (addr ? rpc("eth_getBalance", [addr, "latest"]) : null);
+const TEST_KEY_SLOT = NS + ".testsession";
+const readTestKey = () => { try { const v = sessionStorage.getItem(TEST_KEY_SLOT); return /^0x[0-9a-f]{64}$/.test(v || "") ? v : ""; } catch (e) { return ""; } };
+const writeTestKey = (v) => { try { if (v) sessionStorage.setItem(TEST_KEY_SLOT, v); else sessionStorage.removeItem(TEST_KEY_SLOT); } catch (e) {} };
+function randomKey() { const b = new Uint8Array(32); crypto.getRandomValues(b); return "0x" + Array.from(b, (x) => x.toString(16).padStart(2, "0")).join(""); }
+function useLocalAccount(pk, kind) {
+  const acct = createAccount(pk);
+  account = acct.address; usingInjected = false; walletKind = kind;
+  client = createClient({ chain: studionet, account: acct });
+  net.ok = true; drawNet();
+}
+function startTestSession(silent) {
+  let pk = readTestKey();
+  if (!pk) { pk = randomKey(); writeTestKey(pk); }
+  useLocalAccount(pk, "test");
+  if (!silent) { closeDialog(); toast("Test session started. Fund it with test GEN before sending value."); route(); }
+}
+async function connectInjected(errEl) {
+  if (!window.ethereum) { errEl.textContent = "No browser wallet was found. Open this page inside your wallet app's browser, or start a test session."; return; }
+  try {
+    const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
+    account = accounts[0]; usingInjected = true; walletKind = "injected";
+    client = createClient({ chain: studionet, account });
+    writeTestKey("");
+    if (!(await checkChain())) { try { await switchChain(); } catch (e) {} }
+    closeDialog(); toast("Wallet connected"); route();
+  } catch (e) { errEl.textContent = explain(e); }
+}
+function connectKey(input, errEl) {
+  let pk = input.value.trim();
+  if (/^[0-9a-fA-F]{64}$/.test(pk)) pk = "0x" + pk;
+  if (!/^0x[0-9a-fA-F]{64}$/.test(pk)) { input.setAttribute("aria-invalid", "true"); errEl.textContent = "A private key is 64 hexadecimal characters, optionally starting with 0x."; input.focus(); return; }
+  try { useLocalAccount(pk, "key"); writeTestKey(""); closeDialog(); toast("Account connected"); route(); }
+  catch (e) { errEl.textContent = "This key could not be used: " + explain(e); }
+}
+function disconnect() { writeTestKey(""); client = null; account = null; usingInjected = false; walletKind = ""; net.ok = true; me.role = null; drawNet(); closeDialog(); toast("Disconnected"); route(); }
+
+/* ---------- dialogs ---------- */
+const dlg = $("dlg");
+let dlgResolve = null, dlgReturnFocus = null;
+function openDialog(title, ...content) {
+  if (!dlg.open) dlgReturnFocus = document.activeElement;
+  put($("dlgBody"),
+    h("div", { class: "dlg-head" }, h("h2", { id: "dlgTitle", text: title }), h("button", { class: "x", type: "button", "aria-label": "Close", onclick: () => closeDialog(false) }, icon("x"))),
+    ...content);
+  if (!dlg.open) dlg.showModal();
+}
+function settle(value) { if (dlgResolve) { const r = dlgResolve; dlgResolve = null; r(!!value); } }
+function closeDialog(value) { settle(value); if (dlg.open) dlg.close(); }
+dlg.addEventListener("close", () => { settle(false); if (dlgReturnFocus && document.contains(dlgReturnFocus)) dlgReturnFocus.focus(); dlgReturnFocus = null; });
+dlg.addEventListener("click", (e) => { if (e.target === dlg) closeDialog(false); });
+function confirmAction({ title, intro, rows = [], note, confirm, danger }) {
+  return new Promise((resolve) => {
+    openDialog(title,
+      intro ? h("p", { class: "muted", text: intro }) : null,
+      rows.length ? h("dl", { class: "kv", style: "margin-top:16px" }, rows.map(([k, v]) => [h("dt", { text: k }), h("dd", { class: "num", text: v })])) : null,
+      note ? h("p", { class: "callout warn", style: "margin-top:16px", text: note }) : null,
+      h("div", { class: "actions", style: "margin-top:24px" },
+        h("button", { class: "btn btn-secondary", type: "button", text: "Go back", onclick: () => closeDialog(false) }),
+        h("button", { class: "btn " + (danger ? "btn-danger" : "btn-primary"), type: "button", id: "dlgConfirm", text: confirm, onclick: () => closeDialog(true) })));
+    dlgResolve = resolve;
+    setTimeout(() => $("dlgConfirm")?.focus(), 30);
+  });
+}
+async function openWallet() {
+  const err = h("p", { class: "err", role: "alert" });
+  const pk = h("input", { class: "input", id: "pkIn", type: "password", placeholder: "0x followed by 64 characters", autocapitalize: "off", autocomplete: "off", spellcheck: "false" });
+  const addrIn = h("input", { class: "input", id: "addrIn", value: hasContract ? CONTRACT_ADDRESS : "", placeholder: "0x followed by 40 characters", autocapitalize: "off", autocomplete: "off", spellcheck: "false" });
+  const addrErr = h("p", { class: "err", role: "alert" });
+  const bal = h("span", { class: "num", text: "…" });
+  const connectedBlock = account ? h("div", { class: "inset stack" },
+    h("div", { class: "row between wrap" }, h("span", { class: "small muted", text: walletKind === "test" ? "Test session" : walletKind === "key" ? "Private key account" : "Browser wallet" }), h("span", { class: "small" }, "Balance ", bal, " GEN")),
+    h("p", { class: "addr small", text: account }),
+    h("div", { class: "actions" },
+      h("button", { class: "btn btn-secondary sm", type: "button", onclick: () => copyText(account) }, icon("copy", 16), "Copy address"),
+      h("button", { class: "btn btn-danger sm", type: "button", text: "Disconnect", onclick: disconnect }))) : null;
+  openDialog(account ? "Wallet" : "Connect a wallet",
+    connectedBlock,
+    h("div", { style: account ? "margin-top:24px" : null },
+      h("h3", { text: account ? "Switch account" : "Choose how to sign" }),
+      h("div", { style: "margin-top:12px" },
+        h("button", { class: "option", type: "button", onclick: () => connectInjected(err) }, h("b", { text: "Browser wallet" }), h("span", { text: "MetaMask, Rabby or any injected wallet. On a phone, open this page in your wallet app's browser." })),
+        h("button", { class: "option", type: "button", onclick: () => startTestSession(false) }, h("b", { text: "Test session" }), h("span", { text: "A throwaway account that lives in this tab, for trying things on Studio." })))),
+    h("details", { class: "tune" }, h("summary", { text: "Use a Studio private key" }),
+      h("div", { style: "padding-bottom:8px" },
+        h("div", { class: "field" }, h("label", { for: "pkIn", text: "Private key" }), pk, h("p", { class: "help", text: "Testnet keys only. The key stays in this tab and only signs your transactions." })),
+        h("button", { class: "btn btn-secondary block", type: "button", style: "margin-top:12px", text: "Use this key", onclick: () => connectKey(pk, err) }))),
+    err,
+    h("details", { class: "tune", open: !hasContract }, h("summary", { text: "Contract address" }),
+      h("div", { style: "padding-bottom:8px" },
+        h("div", { class: "field" }, h("label", { for: "addrIn" }, "GroupBond contract", h("span", { class: "req", "aria-hidden": "true", text: "*" })), addrIn,
+          h("p", { class: "help", text: "The address of a deployed GroupBond contract. It is remembered in this browser." }), addrErr),
+        h("button", { class: "btn btn-secondary block", type: "button", style: "margin-top:12px", text: "Use this contract", onclick: () => {
+          const v = addrIn.value.trim();
+          if (!okAddr(v)) { addrIn.setAttribute("aria-invalid", "true"); addrErr.textContent = "Enter a 0x address with 40 hexadecimal characters."; addrIn.focus(); return; }
+          try { localStorage.setItem(NS + ".contract", v); } catch (e) {}
+          location.search = "?contract=" + v;
+        } }))));
+  if (account) { const b = await balanceOf(account); bal.textContent = b === null ? "unknown" : genStr(b, 2); }
+}
+$("walletBtn").addEventListener("click", openWallet);
+function drawTheme() {
+  const dark = document.documentElement.dataset.theme ? document.documentElement.dataset.theme === "dark" : window.matchMedia("(prefers-color-scheme: dark)").matches;
+  put($("themeBtn"), icon(dark ? "sun" : "moon", 18));
+  $("themeBtn").setAttribute("aria-label", dark ? "Switch to light theme" : "Switch to dark theme");
+}
+$("themeBtn").addEventListener("click", () => {
+  const dark = document.documentElement.dataset.theme ? document.documentElement.dataset.theme === "dark" : window.matchMedia("(prefers-color-scheme: dark)").matches;
+  const next = dark ? "light" : "dark";
+  document.documentElement.dataset.theme = next;
+  try { localStorage.setItem(NS + ".theme", next); } catch (e) {}
+  drawTheme();
+});
+drawTheme();
+
+/* ---------- contract calls and the four-stage tracker ---------- */
+function unwrap(receipt) {
+  let v = receipt?.consensus_data?.leader_receipt?.[0]?.result?.payload?.readable;
+  if (v === undefined) return null;
+  for (let i = 0; i < 3; i++) {
+    if (typeof v !== "string") break;
+    const t = v.trim();
+    if (!(t.startsWith("{") || t.startsWith("[") || t.startsWith('"'))) break;
+    try { v = JSON.parse(v); } catch (e) { break; }
+  }
+  return v;
+}
+const read = (functionName, args = []) => readClient.readContract({ address: CONTRACT_ADDRESS, functionName, args });
+async function readJson(functionName, args = []) {
+  const raw = await read(functionName, args);
+  if (raw === "" || raw === null || raw === undefined) return null;
+  return typeof raw === "string" ? JSON.parse(raw) : raw;
+}
+function explain(e) {
+  const m = String(e?.shortMessage || e?.details || e?.message || e || "");
+  if (e?.code === 4001 || /user rejected|user denied|rejected the request|denied transaction/i.test(m)) return "You declined the request in your wallet. Nothing was sent.";
+  if (/insufficient funds|insufficient balance/i.test(m)) return "This account does not have enough GEN for this transaction.";
+  if (/failed to fetch|networkerror|network error|timeout|timed out|ECONN|load failed/i.test(m)) return "GenLayer Studio could not be reached. Check your connection and try again.";
+  return m.length > 320 ? m.slice(0, 320) + "…" : m || "Unknown error";
+}
+const busy = new Set();
+function txPanel() {
+  const steps = [["sign", "Signature"], ["sent", "Submitted"], ["accepted", "Accepted by validators"], ["final", "Finalized"]];
+  const items = steps.map(([k, t]) => h("li", { "data-k": k }, h("span", { class: "b", "aria-hidden": "true" }), h("span", { text: t })));
+  const msg = h("div", { class: "msg" });
+  const el = h("div", { class: "tx", role: "status", "aria-live": "polite", hidden: true }, h("ol", {}, items), msg);
+  return {
+    el,
+    reset() { el.hidden = true; el.classList.remove("bad", "good"); items.forEach((li) => (li.className = "")); clear(msg); },
+    at(key, text) {
+      el.hidden = false; el.classList.remove("bad");
+      let reached = false;
+      for (const li of items) { if (li.dataset.k === key) { li.className = "now"; reached = true; } else li.className = reached ? "" : "done"; }
+      if (text !== undefined) put(msg, text);
+    },
+    accepted(text) { items.forEach((li) => (li.className = li.dataset.k === "final" ? "now" : "done")); el.classList.add("good"); if (text !== undefined) put(msg, text); },
+    final(text) { items.forEach((li) => (li.className = "done")); put(msg, text); },
+    fail(text, hint) {
+      el.hidden = false; el.classList.add("bad");
+      const cur = items.find((li) => li.className === "now") || items[0];
+      cur.className = "fail";
+      put(msg, h("b", { text }), hint ? h("div", { style: "margin-top:4px", text: hint }) : null);
+    },
+    note(text) { el.hidden = false; put(msg, text); },
+  };
+}
+function needClient() {
+  if (client) return true;
+  toast("Connect a wallet to continue", true);
+  openWallet();
+  return false;
+}
+async function write(ui, label, functionName, args, valueWei, onDone) {
+  if (!needClient()) return null;
+  const key = functionName + ":" + JSON.stringify(args, (k, v) => (typeof v === "bigint" ? v.toString() : v));
+  if (busy.has(key)) return null;
+  busy.add(key);
+  ui.reset();
+  try {
+    if (usingInjected && !(await checkChain())) {
+      ui.at("sign", "Switching your wallet to GenLayer Studio…");
+      try { await switchChain(); } catch (e) { ui.fail("Your wallet is on another network.", "Switch to GenLayer Studio and try again."); return null; }
+    }
+    const value = valueWei ?? 0n;
+    if (value > 0n) {
+      const bal = await balanceOf(account);
+      if (bal !== null && bal < value) {
+        ui.at("sign");
+        ui.fail(`Not enough GEN: this needs ${genStr(value)} GEN and the account holds ${genStr(bal)} GEN.`, "Top up the account and try again.");
+        return null;
+      }
+    }
+    ui.at("sign", usingInjected ? `Confirm ${label} in your wallet.` : `Signing ${label}…`);
+    const slow = setTimeout(() => ui.note("Still waiting for the wallet. Open your wallet app and look for a pending request."), 20000);
+    let hash;
+    try { hash = await client.writeContract({ address: CONTRACT_ADDRESS, functionName, args, value }); }
+    finally { clearTimeout(slow); }
+    ui.at("sent", h("span", {}, "Transaction ", h("span", { class: "addr", text: short(hash) }), " is with the validators. This can take a minute or more."));
+    const receipt = await client.waitForTransactionReceipt({ hash, status: "ACCEPTED", interval: 3000, retries: 200 });
+    const result = unwrap(receipt);
+    const lr = receipt?.consensus_data?.leader_receipt?.[0];
+    if (lr?.execution_result === "ERROR") {
+      ui.at("accepted");
+      ui.fail("The contract refused this call.", typeof result === "string" && result ? result.slice(0, 400) : "No reason was returned.");
+      return null;
+    }
+    if (typeof result === "string" && result.startsWith("REFUNDED:")) {
+      const why = result.slice(9);
+      ui.at("accepted");
+      ui.fail("Not accepted: " + (REFUND_TEXT[why] || why.replace(/_/g, " ") + "."), value > 0n ? "The GEN you sent was credited back to your balance. Withdraw it on the Account page." : "Nothing was changed.");
+      return null;
+    }
+    const refresh = h("button", { class: "btn btn-secondary sm", type: "button", style: "margin-top:8px", text: "Refresh this page", onclick: () => route() });
+    ui.accepted(h("span", {}, "Accepted by validators. The result already counts; finalization follows.", h("div", {}, refresh)));
+    if (onDone) onDone(result);
+    client.waitForTransactionReceipt({ hash, status: "FINALIZED", interval: 5000, retries: 200 })
+      .then(() => ui.final(h("span", {}, "Finalized. This result is now permanent.", h("div", {}, h("button", { class: "btn btn-secondary sm", type: "button", style: "margin-top:8px", text: "Refresh this page", onclick: () => route() })))))
+      .catch(() => ui.note("Accepted. Finalization is taking longer than usual; the result stands unless it is appealed."));
+    return result === null ? true : result;
+  } catch (e) {
+    ui.fail(explain(e));
+    return null;
+  } finally { busy.delete(key); }
+}
+async function runButton(btn, fn) {
+  if (!btn || btn.disabled) return;
+  const label = btn.textContent;
+  btn.disabled = true; btn.setAttribute("aria-busy", "true");
+  put(btn, h("span", { class: "spin", "aria-hidden": "true" }), label);
+  try { return await fn(); }
+  finally { if (document.contains(btn)) { btn.disabled = false; btn.removeAttribute("aria-busy"); btn.textContent = label; } }
+}
+
+/* ---------- shared state ---------- */
+const state = { params: null, bootError: "" };
+const me = { role: null, group: "", status: "" };
+async function boot() {
+  if (!hasContract) return;
+  try {
+    state.params = await readJson("get_params");
+    state.bootError = "";
+    const b = $("envBadge");
+    b.hidden = false; b.textContent = state.params.unit < 3600 ? "Test clock" : "Production windows";
+    b.title = state.params.unit < 3600 ? "This contract counts time in short units so windows pass in seconds" : "Real time windows";
+  } catch (e) { state.bootError = explain(e); }
+}
+async function loadMe() {
+  me.role = null; me.group = ""; me.status = "";
+  if (!account || !state.params) return;
+  try { const w = await readJson("whoami", [account.toLowerCase()]); me.role = w.role; me.group = w.group || ""; me.status = w.status || ""; } catch (e) {}
+}
+const P = () => state.params;
+const bps = (v, b) => (BigInt(v) * BigInt(b)) / 10000n;
+
+/* ---------- small UI pieces ---------- */
+const skel = (hgt = 64, n = 1) => Array.from({ length: n }, () => h("div", { class: "skel", style: `height:${hgt}px`, "aria-hidden": "true" }));
+function field(label, input, help, opts = {}) {
+  const err = h("p", { class: "err", role: "alert" });
+  const el = h("div", { class: "field" }, h("label", { for: input.id, text: label }, opts.req ? h("span", { class: "req", "aria-hidden": "true", text: "*" }) : null), input, help ? h("p", { class: "help", text: help }) : null, err);
+  el.setErr = (t) => { err.textContent = t || ""; if (t) input.setAttribute("aria-invalid", "true"); else input.removeAttribute("aria-invalid"); };
+  return el;
+}
+const textIn = (id, ph, val = "", extra = {}) => h("input", { class: "input", id, type: "text", placeholder: ph, value: val, autocapitalize: "off", autocomplete: "off", spellcheck: "false", ...extra });
+const numIn = (id, ph, val = "") => h("input", { class: "input", id, type: "text", inputmode: "decimal", placeholder: ph, value: val, autocomplete: "off" });
+const areaIn = (id, ph) => h("textarea", { class: "input", id, placeholder: ph, rows: 3, spellcheck: "true" });
+function picker(options, current, onPick) {
+  const wrap = h("div", { class: "seg", role: "group" });
+  const draw = (cur) => put(wrap, options.map(([v, label]) => h("button", { class: "pick", type: "button", "aria-pressed": String(String(v) === String(cur)), text: label, onclick: () => { onPick(v); draw(v); } })));
+  draw(current);
+  return wrap;
+}
+function connectPrompt(text) {
+  return h("div", { class: "inset stack" }, h("p", { class: "muted small", text }), h("button", { class: "btn btn-primary block", type: "button", text: "Connect wallet", onclick: openWallet }));
+}
+function addrLine(a, label) {
+  return h("span", { class: "row", style: "gap:6px;flex-wrap:wrap" }, h("span", { class: "addr small", title: a, text: short(a) }), same(a, account) ? chip("sig plain", "you") : null,
+    h("button", { class: "iconbtn", style: "width:32px;height:32px", type: "button", "aria-label": "Copy " + (label || "address"), onclick: () => copyText(a) }, icon("copy", 15)));
+}
+function kv(rows) { return h("dl", { class: "kv" }, rows.filter(Boolean).map(([k, v]) => [h("dt", { text: k }), h("dd", { class: typeof v === "string" ? "num" : null }, v)])); }
+function empty(title, text, cta) { return h("div", { class: "empty" }, h("h3", { text: title }), h("p", { text }), cta || null); }
+function pageHead(title, lede, crumb) {
+  return h("div", { class: "pagehead" }, crumb ? h("a", { class: "crumb", href: crumb[0] }, icon("back", 18), crumb[1]) : null, h("h1", { text: title }), lede ? h("p", { text: lede }) : null);
+}
+function splitBar(protectWei) {
+  const v = bps(protectWei, P().vendor_bps), g = bps(protectWei, P().group_bps), tot = v + g || 1n;
+  return h("div", { class: "split" },
+    h("div", { class: "bar", role: "img", "aria-label": `Vendor locks ${genStr(v)} GEN, group locks ${genStr(g)} GEN` }, h("i", { class: "v", style: `width:${Number((v * 1000n) / tot) / 10}%` }), h("i", { class: "g", style: `width:${Number((g * 1000n) / tot) / 10}%` })),
+    h("div", { class: "legend" }, h("span", {}, h("b", { style: "background:var(--sig)" }), `Vendor locks ${genStr(v)} GEN`), h("span", {}, h("b", { style: "background:var(--warn)" }), `Group locks ${genStr(g)} GEN`)));
+}
+function gate(root) {
+  if (!hasContract) {
+    put(root, h("div", { class: "panel stack measure" }, h("h1", { text: "Connect GroupBond to a contract" }),
+      h("p", { class: "muted", text: "This page reads and writes a deployed GroupBond contract on GenLayer Studio. Add its address to begin. Browsing needs nothing else; a wallet is only needed to send transactions." }),
+      h("button", { class: "btn btn-primary", type: "button", text: "Add contract address", onclick: openWallet })));
+    return true;
+  }
+  if (state.bootError) {
+    put(root, h("div", { class: "panel stack measure", role: "alert" }, h("h1", { text: "The contract could not be reached" }), h("p", { class: "muted", text: state.bootError }),
+      h("p", { class: "xs addr", text: "Contract " + CONTRACT_ADDRESS }),
+      h("div", { class: "actions" },
+        h("button", { class: "btn btn-primary", type: "button", text: "Try again", onclick: async () => { state.bootError = ""; await boot(); route(); } }),
+        h("button", { class: "btn btn-secondary", type: "button", text: "Change contract", onclick: openWallet }))));
+    return true;
+  }
+  return false;
+}
+function dealCard(d, groupsBy) {
+  const g = groupsBy?.[d.group];
+  return h("a", { class: "card " + edgeOf(d), href: "#/deal/" + d.deal_id },
+    h("div", { class: "row between" }, h("span", { class: "t", text: d.item }), dealChip(d)),
+    h("div", { class: "m" }, h("span", { text: d.price_text }), h("span", { text: "Protected " + gen(d.protect, 2) }), g ? h("span", { text: g.name }) : null),
+    h("div", { class: "xs", text: d.deal_id + " · " + timeAgo(Math.max(d.created_at, d.claimed_at, d.bound_at, d.delivered_at, d.dispute_opened_at, d.resolved_at)) }));
+}
+function groupCard(g) {
+  const lvl = { GUARDIAN: "pos", STEADY: "sig", NEW: "plain" }[g.level];
+  return h("a", { class: "card e-sig", href: "#/group/" + g.slug },
+    h("div", { class: "row between" }, h("span", { class: "t", text: g.name }), chip(lvl, g.level.charAt(0) + g.level.slice(1).toLowerCase())),
+    h("div", { class: "m" }, h("span", { text: PLAT[g.platform] || g.platform }), h("span", { text: g.vendors_approved + " vendors" }), h("span", { text: "Score " + g.score })),
+    h("div", { class: "m" }, h("span", { text: "Free pool " + gen(g.free, 1) }), h("span", { text: g.active_deals + " live deals" })));
+}
+function eventFor(d, gname) {
+  const [tone, label] = dealTone(d);
+  const ic = { COMPLETED: "check", RESOLVED: "gavel", DISPUTED: "alert", REOPENED: "alert", CHALLENGED: "alert", PAYOUT_PENDING: "clock", DELIVERED: "box", ACTIVE: "coin", PAYMENT_CLAIMED: "coin", OPEN: "bag" }[d.status] || "bag";
+  const ts = Math.max(d.created_at, d.claimed_at, d.bound_at, d.delivered_at, d.dispute_opened_at, d.resolved_at);
+  let sub = label + (d.status === "RESOLVED" && BigInt(d.compensation) > 0n ? ", " + gen(d.compensation, 2) + " paid" : "") + (gname ? " · " + gname : "");
+  return { tone: tone === "plain" ? "" : tone, ic, title: d.item, sub, ts, id: d.deal_id };
+}
+
+/* ---------- views ---------- */
+async function viewHome(root, tok) {
+  put(root, skel(220), skel(90, 3));
+  const [stats, dl, groups, acc] = await Promise.all([readJson("get_stats"), readJson("list_deals", [0, 40]), readJson("list_groups"), readJson("get_accounting")]);
+  const held = await balanceOf(CONTRACT_ADDRESS);
+  if (tok !== routeTok) return;
+  const gb = Object.fromEntries(groups.map((g) => [g.slug, g]));
+  const deals = dl.deals;
+  const events = deals.map((d) => eventFor(d, gb[d.group]?.name)).sort((a, b) => b.ts - a.ts).slice(0, 6);
+  const balanced = held !== null && held === BigInt(acc.tracked);
+  const books = h("div", { class: "books" + (held !== null && !balanced ? " off" : "") },
+    held === null
+      ? [h("b", { text: "Accounting tracked" }), h("span", { class: "num", text: gen(acc.tracked, 2) + " (on-chain balance not readable right now)" })]
+      : balanced
+        ? [h("b", {}, icon("check", 16), "Balanced"), h("span", { class: "num", text: `Contract holds ${gen(held, 2)}, equal to bonds + pools + claims + deposits.` })]
+        : [h("b", { text: "Check needed" }), h("span", { class: "num", text: `Tracked ${gen(acc.tracked, 2)} but the contract holds ${gen(held, 2)}.` })]);
+  const strip = h("div", { class: "strip" },
+    h("div", { class: "stat" }, h("b", { class: "num", text: String(stats.groups) }), h("span", { text: "Groups" }), h("span", { class: "sub", text: stats.vendors + " vendors" })),
+    h("div", { class: "stat" }, h("b", { class: "num", text: genStr(stats.protected_open, 2) }), h("span", { text: "GEN protected now" }), h("span", { class: "sub", text: stats.active + stats.disputed + " live deals" })),
+    h("div", { class: "stat" }, h("b", { class: "num", text: String(stats.deals) }), h("span", { text: "Deals" }), h("span", { class: "sub", text: stats.completed + stats.resolved + " settled" })),
+    h("div", { class: "stat" }, h("b", { class: "num", text: genStr(stats.paid_to_buyers, 2) }), h("span", { text: "GEN paid to buyers" }), h("span", { class: "sub", text: stats.resolved + " rulings" })));
+  const hero = h("section", { class: "hero" },
+    h("div", {},
+      h("span", { class: "live" + (stats.groups ? "" : " off") }, h("i", { "aria-hidden": "true" }), h("span", {}, h("b", { text: stats.groups + (stats.groups === 1 ? " group" : " groups") }), " live on Studio")),
+      h("h1", { text: "A bond behind every sale made in a group chat" }),
+      h("p", { class: "lede", text: "The group admin and the vendor both put GEN at stake. If a delivery goes wrong, validators weigh the evidence and the buyer is paid from the vendor's lock first, then the group's pool." }),
+      h("div", { class: "actions" }, h("a", { class: "btn btn-primary", href: "#/start", text: "Open a group" }), h("a", { class: "btn btn-secondary", href: "#/groups", text: "Browse groups" }))),
+    h("div", { class: "hero-art" }, heroArt()),
+    strip);
+  const feed = h("section", { class: "feed", "aria-labelledby": "feedH" },
+    h("div", { class: "feed-head" }, h("h2", { id: "feedH", text: "Live contract activity" }), h("span", { class: "src", text: "from the contract" })),
+    events.length
+      ? h("ol", {}, events.map((e) => h("li", {}, h("a", { href: "#/deal/" + e.id }, h("span", { class: "ev-i " + e.tone }, icon(e.ic, 18)), h("span", { style: "min-width:0" }, h("span", { class: "ev-t", text: e.title }), h("span", { class: "ev-s", text: e.sub })), h("span", { class: "ev-a", text: timeAgo(e.ts) })))))
+      : h("div", { class: "empty" }, h("p", { text: "No deals yet. The first group and vendor will show up here." })),
+    books);
+  const roles = h("div", { class: "roles" },
+    roleCard("#/start", "groups", "Run a group", "Post a pool, approve vendors"),
+    roleCard("#/sell", "bag", "Sell in a group", "Bond up, list deals, get paid"),
+    roleCard("#/deals", "manage", "Buy with cover", "Claim a deal, dispute if it fails"));
+  const sentence = h("p", { class: "sentence" }, "Find protected sellers in a ",
+    ...["telegram", "whatsapp", "discord"].map((p) => h("button", { class: "pick", type: "button", text: PLAT[p], onclick: () => (location.hash = "#/groups?p=" + p) })), " group.");
+  const how = h("details", { class: "how", open: true }, h("summary", {}, "How it works", icon("down", 18)),
+    h("ol", {},
+      h("li", {}, h("b", { text: "Admin posts a pool" }), h("span", { text: "The group admin locks GEN and approves vendors who sell in the group." })),
+      h("li", {}, h("b", { text: "Vendors add a bond" }), h("span", { text: `Each deal locks ${P().vendor_bps / 100}% from the vendor and ${P().group_bps / 100}% from the group.` })),
+      h("li", {}, h("b", { text: "Buyer pays as usual" }), h("span", { text: "Payment stays off-chain. The buyer claims it with a refundable deposit and the vendor confirms." })),
+      h("li", {}, h("b", { text: "Validators rule" }), h("span", { text: "On a dispute the vendor's lock pays first, then the group pool. Losing vendors are suspended." }))));
+  put(root, h("div", { class: "stack-lg" }, hero, feed, h("section", { class: "section", style: "margin-top:0" }, h("h2", { text: "Pick your role" }), roles), sentence, how,
+    deals.length ? h("section", { class: "section", style: "margin-top:0" }, h("div", { class: "sechead" }, h("h2", { text: "Latest deals" }), h("a", { class: "btn btn-ghost sm", href: "#/deals", text: "All deals" })), h("div", { class: "cards" }, deals.slice(0, 6).map((d) => dealCard(d, gb)))) : null));
+}
+function roleCard(href, ic, title, text) {
+  return h("a", { class: "role-card", href }, h("span", { class: "role-ic" }, icon(ic, 24)), h("span", { class: "role-text" }, h("b", { text: title }), h("span", { text })), h("span", { class: "role-go" }, icon("arrow", 20)));
+}
+
+async function viewGroups(root, q, tok) {
+  put(root, pageHead("Groups", "Each group has an admin whose pool backs the vendors they approve."), skel(100, 3));
+  const groups = await readJson("list_groups");
+  if (tok !== routeTok) return;
+  const cur = q.get("p") || "all";
+  const draw = (p) => {
+    const list = groups.filter((g) => p === "all" || g.platform === p);
+    put(grid, list.length ? h("div", { class: "cards" }, list.sort((a, b) => Number(BigInt(b.pool) - BigInt(a.pool))).map(groupCard)) : empty("No groups here yet", p === "all" ? "Be the first to open one." : "No group on this platform yet.", h("a", { class: "btn btn-primary", href: "#/start", text: "Open a group" })));
+  };
+  const grid = h("div");
+  const filters = h("div", { class: "scroller", role: "group" });
+  const drawF = (p) => put(filters, [["all", "All"], ...Object.entries(PLAT)].map(([v, t]) => h("button", { class: "pick", type: "button", "aria-pressed": String(v === p), text: t, onclick: () => { drawF(v); draw(v); } })));
+  drawF(cur); draw(cur);
+  put(root, pageHead("Groups", "Each group has an admin whose pool backs the vendors they approve."), filters, grid);
+}
+
+function adminControls(g, v, ui) {
+  const btn = (label, fn, cls = "btn btn-secondary sm", confirmOpts) => h("button", { class: cls, type: "button", text: label, onclick: (e) => runButton(e.currentTarget, async () => {
+    if (confirmOpts && !(await confirmAction(confirmOpts))) return;
+    await write(ui, label.toLowerCase(), fn, [v.owner], 0n, () => {});
+  }) });
+  const out = [];
+  if (v.status === "PENDING" || v.status === "SUSPENDED") out.push(btn(v.status === "PENDING" ? "Approve" : "Re-approve", "approve_vendor", "btn btn-primary sm"));
+  if (v.status === "APPROVED") out.push(btn("Suspend", "suspend_vendor"));
+  if (v.status !== "REMOVED") out.push(btn("Remove", "remove_vendor", "btn btn-danger sm", { title: "Remove vendor?", intro: `${v.handle} will lose access to this group. Removal is final and needs no active deals.`, confirm: "Remove vendor", danger: true }));
+  return h("div", { class: "actions", style: "margin-top:8px" }, out);
+}
+
+async function viewGroup(root, slug, tok) {
+  put(root, skel(140), skel(80, 3));
+  const [g, vendors, deals] = await Promise.all([readJson("get_group", [slug]), readJson("list_vendors", [slug]), readJson("group_deals", [slug])]);
+  if (tok !== routeTok) return;
+  if (!g) { put(root, h("div", { class: "panel" }, empty("Group not found", "There is no group with this address on this contract.", h("a", { class: "btn btn-secondary", href: "#/groups", text: "All groups" })))); return; }
+  const isAdmin = same(account, g.admin);
+  const ui = txPanel();
+  const vlist = vendors.length
+    ? h("ul", { class: "list" }, vendors.map((v) => h("li", {}, h("div", { class: "item" },
+        h("span", { class: "title", text: "@" + v.handle }), h("span", { class: "end" }, vendorChip(v.status)),
+        h("span", { class: "meta" }, h("span", { text: "Bond " + gen(v.bond, 1) }), h("span", { text: "Score " + v.score }), h("span", { text: v.completed_verified + v.completed_auto + " completed" }), v.disputes_lost ? h("span", { text: v.disputes_lost + " lost" }) : null)),
+        isAdmin ? h("div", { style: "padding:0 var(--s5) var(--s4)" }, adminControls(g, v, ui)) : null)))
+    : empty("No vendors yet", "Vendors join with a bond, then the admin approves them.");
+  let side;
+  if (isAdmin) {
+    const amt = numIn("poolAmt", "GEN");
+    const f = field("Amount in GEN", amt, `Free pool ${gen(g.free, 2)}. Locked GEN backs open deals and cannot be withdrawn.`, {});
+    const go = (label, fn, valued) => h("button", { class: "btn " + (valued ? "btn-primary" : "btn-secondary"), type: "button", text: label, onclick: (e) => runButton(e.currentTarget, async () => {
+      const w = genToWei(amt.value);
+      if (!w || w <= 0n) return f.setErr("Enter an amount above zero.");
+      f.setErr("");
+      if (!(await confirmAction({ title: label, intro: valued ? "This GEN is locked into the pool and backs every vendor in the group." : "Withdrawn GEN is credited to your balance on this contract. Claim it on the Account page.", rows: [["Amount", gen(w)]], confirm: label }))) return;
+      await write(ui, label.toLowerCase(), fn, fn === "withdraw_pool" ? [w] : [], valued ? w : 0n, () => {});
+    }) });
+    side = h("div", { class: "panel stack" }, h("h2", { text: "Manage pool" }), f, h("div", { class: "actions" }, go("Add to pool", "add_pool", true), go("Withdraw", "withdraw_pool", false)), ui.el);
+  } else {
+    side = h("div", { class: "panel stack" }, h("h2", { text: "Sell in this group" }),
+      h("p", { class: "muted small", text: "Join with a bond. The admin must approve you before you can list deals." }),
+      h("a", { class: "btn btn-primary", href: "#/sell/" + g.slug, text: "Join as vendor" }),
+      h("p", { class: "xs", text: "Buying? Open a deal below, then claim payment on its page." }));
+  }
+  const info = h("div", { class: "panel stack" },
+    h("div", { class: "row between wrap" }, h("div", { class: "row wrap" }, chip("sig", PLAT[g.platform] || g.platform), chip("plain", g.level.charAt(0) + g.level.slice(1).toLowerCase() + " group")), safeUrl(g.invite_url) ? h("a", { class: "btn btn-secondary sm", href: g.invite_url, target: "_blank", rel: "noopener noreferrer nofollow", text: "Open the group" }) : null),
+    kv([["Admin", addrLine(g.admin, "admin address")], ["Pool", gen(g.pool, 2)], ["Locked by open deals", gen(g.locked, 2)], ["Free", gen(g.free, 2)], ["Group score", String(g.score)],
+      ["Completed deals", String(g.completed)], ["Disputes", `${g.disputes_won} won, ${g.disputes_lost} lost, ${g.disputes_split} split, ${g.inconclusive} inconclusive`], ["Paid from pool", gen(g.compensated, 2)]]),
+    h("div", {}, h("p", { class: "label", text: "Shared liability on a 10 GEN deal" }), splitBar(10n * WEI)));
+  put(root, h("div", { class: "stack-lg" }, pageHead(g.name, "@" + g.slug, ["#/groups", "All groups"]),
+    h("div", { class: "cols act-first" }, h("div", { class: "stack-lg" }, info,
+      h("section", {}, h("h2", { style: "margin-bottom:12px", text: "Vendors" }), vlist),
+      h("section", {}, h("h2", { style: "margin-bottom:12px", text: "Deals" }), deals.length ? h("div", { class: "cards" }, deals.slice(0, 20).map((d) => dealCard(d))) : empty("No deals yet", "Deals appear here when vendors list them."))),
+      h("div", { class: "sticky" }, side))));
+}
+
+async function viewStart(root, tok) {
+  if (!account) { put(root, pageHead("Open a group", "Lock a pool and become the admin vouching for vendors."), connectPrompt("Connect a wallet to open a group.")); return; }
+  if (me.role === "admin") { put(root, pageHead("Open a group"), h("div", { class: "panel stack measure" }, h("p", { text: "This account already runs a group." }), h("a", { class: "btn btn-primary", href: "#/group/" + me.group, text: "Go to your group" }))); return; }
+  if (me.role === "vendor") { put(root, pageHead("Open a group"), h("div", { class: "panel stack measure" }, h("p", { text: "This account is a vendor, so it cannot run a group. Use another account." }), h("a", { class: "btn btn-secondary", href: "#/sell", text: "Vendor page" }))); return; }
+  const ui = txPanel();
+  let platform = "telegram";
+  const name = textIn("gName", "Dubai Sneaker Club", "", { maxlength: "60" });
+  const slug = textIn("gSlug", "dubai_sneakers", "", { maxlength: "30" });
+  const url = textIn("gUrl", "https://t.me/yourgroup (optional)", "", { inputmode: "url" });
+  const pool = numIn("gPool", "GEN", genStr(P().min_pool, 0));
+  const fName = field("Group name", name, "3 to 60 characters.", { req: true }), fSlug = field("Group address", slug, "Lowercase letters, digits and underscores, 3 to 30. It cannot be changed.", { req: true });
+  const fUrl = field("Invite link", url, "Optional. Must start with https://."), fPool = field("Starting pool in GEN", pool, `At least ${genStr(P().min_pool, 0)} GEN. You can add more later.`, { req: true });
+  const submit = h("button", { class: "btn btn-primary block", type: "button", text: "Open group", onclick: (e) => runButton(e.currentTarget, async () => {
+    let bad = false;
+    const n = name.value.trim(), s = slug.value.trim().toLowerCase(), u = url.value.trim(), w = genToWei(pool.value);
+    if (n.length < 3 || n.length > 60) { fName.setErr("Use 3 to 60 characters."); bad = true; } else fName.setErr("");
+    if (!/^[a-z0-9_]{3,30}$/.test(s)) { fSlug.setErr("Use 3 to 30 lowercase letters, digits or underscores."); bad = true; } else fSlug.setErr("");
+    if (u && !/^https:\/\/[^\s]{4,}$/.test(u)) { fUrl.setErr("Start the link with https://."); bad = true; } else fUrl.setErr("");
+    if (!w || w < BigInt(P().min_pool)) { fPool.setErr(`The pool must be at least ${genStr(P().min_pool, 0)} GEN.`); bad = true; } else fPool.setErr("");
+    if (bad) return;
+    if (!(await confirmAction({ title: "Open this group?", intro: "Your pool backs every vendor you approve. Free GEN can be withdrawn; GEN locked by open deals cannot.", rows: [["Group", n], ["Address", "@" + s], ["Platform", PLAT[platform]], ["Pool", gen(w)]], confirm: "Open group" }))) return;
+    await write(ui, "open group", "create_group", [s, n, platform, u], w, () => setTimeout(() => (location.hash = "#/group/" + s), 1500));
+  }) });
+  put(root, h("div", { class: "stack-lg" }, pageHead("Open a group", "You vouch for vendors with real GEN. If one of them loses a dispute, your pool pays what their own lock cannot cover.", ["#/", "Home"]),
+    h("div", { class: "cols" }, h("div", { class: "panel stack" }, fName, fSlug, h("div", { class: "field" }, h("p", { class: "label", text: "Platform" }), picker(Object.entries(PLAT), platform, (v) => (platform = v))), fUrl, fPool, submit, ui.el),
+      h("div", { class: "stack" }, h("div", { class: "panel stack" }, h("h2", { text: "What your pool does" }), h("p", { class: "muted small", text: `Every deal a vendor lists locks ${P().group_bps / 100}% of the protected amount from your pool and ${P().vendor_bps / 100}% from the vendor's bond.` }), splitBar(10n * WEI), h("p", { class: "xs", text: "Example for a 10 GEN protected deal." })),
+        h("div", { class: "callout warn", text: "Vendors that lose a dispute are suspended automatically. You decide whether to re-approve them." })))));
+}
+
+async function viewSell(root, slugPref, tok) {
+  if (!account) { put(root, pageHead("Sell in a group", "Join a group with a bond, list deals and get paid."), connectPrompt("Connect a wallet to join a group or manage your vendor account.")); return; }
+  if (me.role === "admin") { put(root, pageHead("Sell in a group"), h("div", { class: "panel stack measure" }, h("p", { text: "This account runs a group, and a group admin cannot also sell. Use another account to sell." }), h("a", { class: "btn btn-primary", href: "#/group/" + me.group, text: "Go to your group" }))); return; }
+  if (me.role === "vendor") return viewVendor(root, tok);
+  put(root, skel(200));
+  const groups = await readJson("list_groups");
+  if (tok !== routeTok) return;
+  if (!groups.length) { put(root, pageHead("Sell in a group"), h("div", { class: "panel" }, empty("No groups yet", "A group admin has to open a group first.", h("a", { class: "btn btn-primary", href: "#/start", text: "Open a group" })))); return; }
+  const ui = txPanel();
+  let sel = groups.find((g) => g.slug === slugPref)?.slug || groups[0].slug;
+  const handle = textIn("vHandle", "shop_one", "", { maxlength: "30" });
+  const bond = numIn("vBond", "GEN", genStr(P().min_bond, 0));
+  const fH = field("Vendor handle", handle, "3 to 30 characters: lowercase letters, digits, dots and underscores. Shown publicly.", { req: true });
+  const fB = field("Bond in GEN", bond, `At least ${genStr(P().min_bond, 0)} GEN. It backs ${P().vendor_bps / 100}% of each deal you list.`, { req: true });
+  const picks = h("div");
+  const drawPicks = () => put(picks, h("p", { class: "label", text: "Group" }), picker(groups.map((g) => [g.slug, g.name + " (" + (PLAT[g.platform] || g.platform) + ")"]), sel, (v) => (sel = v)));
+  drawPicks();
+  const submit = h("button", { class: "btn btn-primary block", type: "button", text: "Join group", onclick: (e) => runButton(e.currentTarget, async () => {
+    const hnd = handle.value.trim().toLowerCase(), w = genToWei(bond.value);
+    let bad = false;
+    if (!/^[a-z0-9_.]{3,30}$/.test(hnd)) { fH.setErr("Use 3 to 30 lowercase letters, digits, dots or underscores."); bad = true; } else fH.setErr("");
+    if (!w || w < BigInt(P().min_bond)) { fB.setErr(`The bond must be at least ${genStr(P().min_bond, 0)} GEN.`); bad = true; } else fB.setErr("");
+    if (bad) return;
+    const g = groups.find((x) => x.slug === sel);
+    if (!(await confirmAction({ title: "Join this group?", intro: "Your bond is locked against deals you list and pays buyers first if you lose a dispute. You can withdraw the free part at any time. The group admin must approve you before you can list deals.", rows: [["Group", g.name], ["Handle", "@" + hnd], ["Bond", gen(w)]], confirm: "Join group" }))) return;
+    await write(ui, "join group", "join_group", [sel, hnd], w, () => setTimeout(() => route(), 2500));
+  }) });
+  put(root, h("div", { class: "stack-lg" }, pageHead("Sell in a group", "Pick a group, post a bond and wait for the admin's approval.", ["#/", "Home"]),
+    h("div", { class: "cols" }, h("div", { class: "panel stack" }, picks, fH, fB, submit, ui.el),
+      h("div", { class: "panel stack" }, h("h2", { text: "How your bond is used" }), h("p", { class: "muted small", text: "Each deal you list locks part of your bond and part of the group's pool. If you lose a dispute your lock pays the buyer first and the pool covers the rest." }), splitBar(10n * WEI), h("p", { class: "xs", text: "Example for a 10 GEN protected deal." })))));
+}
+
+async function viewVendor(root, tok) {
+  put(root, skel(200), skel(120));
+  const [v, deals, g] = await Promise.all([readJson("get_vendor", [account.toLowerCase()]), readJson("deals_of", [account.toLowerCase()]), readJson("get_group", [me.group])]);
+  if (tok !== routeTok) return;
+  const ui = txPanel(), ui2 = txPanel();
+  const amt = numIn("bondAmt", "GEN");
+  const fA = field("Amount in GEN", amt, `Free bond ${gen(v.free, 2)}.`);
+  const moveBtn = (label, fn, valued) => h("button", { class: "btn " + (valued ? "btn-primary" : "btn-secondary"), type: "button", text: label, onclick: (e) => runButton(e.currentTarget, async () => {
+    const w = genToWei(amt.value);
+    if (!w || w <= 0n) return fA.setErr("Enter an amount above zero.");
+    fA.setErr("");
+    if (!(await confirmAction({ title: label, intro: valued ? "This GEN is added to your bond and can back larger deals." : "Withdrawn GEN is credited to your balance on this contract. Claim it on the Account page.", rows: [["Amount", gen(w)]], confirm: label }))) return;
+    await write(ui, label.toLowerCase(), fn, fn === "withdraw_bond" ? [w] : [], valued ? w : 0n, () => {});
+  }) });
+  const status = h("div", { class: "panel stack" },
+    h("div", { class: "row between wrap" }, h("h2", { style: "margin:0", text: "@" + v.handle }), vendorChip(v.status)),
+    kv([["Group", h("a", { href: "#/group/" + v.group, text: v.group_name })], ["Bond", gen(v.bond, 2)], ["Locked", gen(v.locked, 2)], ["Free", gen(v.free, 2)], ["Level", v.level.charAt(0) + v.level.slice(1).toLowerCase()], ["Largest deal you can list now", gen(v.available_protection, 2)], ["Score", String(v.score) + (v.trusted ? " (trusted)" : "")],
+      ["Completed", String(v.completed_verified + v.completed_auto)], ["Disputes", `${v.disputes_won} won, ${v.disputes_lost} lost, ${v.disputes_split} split`]]),
+    v.status === "PENDING" ? h("div", { class: "callout", text: "Waiting for the group admin to approve you. You can still add or withdraw bond." }) : null,
+    v.status === "SUSPENDED" ? h("div", { class: "callout bad", text: "You are suspended, usually after losing a dispute. Existing deals continue; the admin can re-approve you." }) : null,
+    v.status === "REMOVED" ? h("div", { class: "callout warn", text: "You were removed from the group. Withdraw your free bond on this page." }) : null,
+    h("div", { class: "field" }, h("label", { for: "bondAmt", text: "Add or withdraw bond" }), amt, h("p", { class: "err" })), fA,
+    h("div", { class: "actions" }, moveBtn("Add bond", "add_bond", true), moveBtn("Withdraw", "withdraw_bond", false)), ui.el);
+  let create = null;
+  if (v.status === "APPROVED") {
+    let hours = 72;
+    const item = textIn("dItem", "What are you selling?", "", { maxlength: "200" }), price = textIn("dPrice", "e.g. 40 USD", "", { maxlength: "80" }), link = textIn("dLink", "https://… (optional)", "", { inputmode: "url" });
+    const protect = numIn("dProtect", "GEN", "");
+    const fI = field("Item", item, "3 to 200 characters.", { req: true }), fP = field("Price as you quote it", price, "Text only; payment happens off-chain.", { req: true }), fL = field("Listing link", link, "Optional. Starts with https://. It is stored, never opened."), fR = field("Protected amount in GEN", protect, `Between ${genStr(P().min_protect, 0)} and ${genStr(v.available_protection, 2)} GEN right now. Buyers are compensated up to this amount.`, { req: true });
+    const split = h("div", { class: "split" });
+    const draw = () => { const w = genToWei(protect.value); put(split, w && w > 0n ? splitBar(w) : null); };
+    protect.addEventListener("input", draw);
+    const cta = h("button", { class: "btn btn-primary block", type: "button", text: "List deal", onclick: (e) => runButton(e.currentTarget, async () => {
+      const it = item.value.trim(), pr = price.value.trim(), li = link.value.trim(), w = genToWei(protect.value);
+      let bad = false;
+      if (it.length < 3 || it.length > 200) { fI.setErr("Use 3 to 200 characters."); bad = true; } else fI.setErr("");
+      if (!pr || pr.length > 80) { fP.setErr("Use 1 to 80 characters."); bad = true; } else fP.setErr("");
+      if (li && !/^https:\/\/[^\s]{4,}$/.test(li)) { fL.setErr("Start the link with https://."); bad = true; } else fL.setErr("");
+      if (!w || w < BigInt(P().min_protect) || w > BigInt(v.available_protection)) { fR.setErr(`Enter between ${genStr(P().min_protect, 0)} and ${genStr(v.available_protection, 2)} GEN.`); bad = true; } else fR.setErr("");
+      if (bad) return;
+      if (!(await confirmAction({ title: "List this deal?", intro: "The locks below stay frozen until the deal ends.", rows: [["Item", it], ["Protected", gen(w)], ["Your lock", gen(bps(w, P().vendor_bps))], ["Group pool lock", gen(bps(w, P().group_bps))], ["Delivery window", hours + " hours after payment is confirmed"]], confirm: "List deal" }))) return;
+      await write(ui2, "list deal", "create_deal", [it, pr, li, w, BigInt(hours)], 0n, () => {});
+    }) });
+    create = h("div", { class: "panel stack" }, h("h2", { text: "List a deal" }), fI, fP, fL, fR, split,
+      h("div", { class: "field" }, h("p", { class: "label", text: "Delivery window" }), picker([[24, "24 h"], [48, "48 h"], [72, "3 days"], [168, "7 days"], [336, "14 days"]], hours, (x) => (hours = x)), h("p", { class: "help", text: "How long you have to deliver once the buyer's payment is confirmed." })), cta, ui2.el);
+  }
+  const leave = v.status !== "REMOVED" ? h("button", { class: "btn btn-danger", type: "button", text: "Leave group", onclick: (e) => runButton(e.currentTarget, async () => {
+    if (!(await confirmAction({ title: "Leave this group?", intro: "You can no longer list deals here. This is final, and needs no active deals. Withdraw your bond afterwards.", confirm: "Leave group", danger: true }))) return;
+    await write(ui, "leave group", "leave_group", [], 0n, () => {});
+  }) }) : null;
+  put(root, h("div", { class: "stack-lg" }, pageHead("Your vendor account", g ? `Selling in ${g.name}` : "", ["#/", "Home"]),
+    h("div", { class: "cols act-first" }, h("div", { class: "stack-lg" }, status, leave,
+      h("section", {}, h("h2", { style: "margin-bottom:12px", text: "Your deals" }), deals.length ? h("div", { class: "cards" }, deals.map((d) => dealCard(d))) : empty("No deals yet", v.status === "APPROVED" ? "List your first deal on the right." : "Deals appear after approval."))),
+      h("div", { class: "sticky" }, create || h("div", { class: "panel" }, h("p", { class: "muted small", text: "Listing opens once the group admin approves you." }))))));
+}
+
+async function viewDeals(root, q, tok) {
+  put(root, pageHead("Deals", "Every protected sale on this contract."), skel(90, 4));
+  const [dl, groups] = await Promise.all([readJson("list_deals", [0, 100]), readJson("list_groups")]);
+  if (tok !== routeTok) return;
+  const gb = Object.fromEntries(groups.map((g) => [g.slug, g]));
+  const FIL = { all: ["All", () => true], open: ["Open", (d) => d.status === "OPEN" || d.status === "PAYMENT_CLAIMED"], live: ["Live", (d) => ["ACTIVE", "DELIVERED"].includes(d.status)], dispute: ["Disputes", (d) => ["DISPUTED", "REOPENED", "CHALLENGED", "PAYOUT_PENDING"].includes(d.status)], done: ["Settled", (d) => ["COMPLETED", "RESOLVED"].includes(d.status)] };
+  const grid = h("div"), filters = h("div", { class: "scroller", role: "group" });
+  const draw = (k) => put(grid, (() => { const l = dl.deals.filter(FIL[k][1]); return l.length ? h("div", { class: "cards" }, l.map((d) => dealCard(d, gb))) : empty("Nothing here", "No deals match this filter yet."); })());
+  const drawF = (k) => put(filters, Object.entries(FIL).map(([v, [t]]) => h("button", { class: "pick", type: "button", "aria-pressed": String(v === k), text: t, onclick: () => { drawF(v); draw(v); } })));
+  const k0 = FIL[q.get("f")] ? q.get("f") : "all";
+  drawF(k0); draw(k0);
+  put(root, pageHead("Deals", `${dl.total} deal${dl.total === 1 ? "" : "s"} on this contract.`), filters, grid);
+}
+
+function timelineFor(d) {
+  const rows = [["Offer listed", d.created_at, ""]];
+  if (d.claimed_at) rows.push(["Payment claimed", d.claimed_at, d.payment_ref ? "Reference: " + d.payment_ref : ""]);
+  else if (d.rejections) rows.push(["Claim rejected", 0, d.reject_reason ? "Reason: " + d.reject_reason : ""]);
+  if (d.bound_at) rows.push([d.bound_by === "seller" ? "Vendor confirmed payment" : "Bound after the vendor stayed silent", d.bound_at, ""]);
+  if (d.delivered_at) rows.push(["Vendor posted delivery proof", d.delivered_at, ""]);
+  if (d.dispute_opened_at) rows.push(["Dispute opened", d.dispute_opened_at, ""]);
+  if (d.status === "PAYOUT_PENDING") rows.push(["Payout waiting for challenge window", d.unlock_at, "Unlocks " + fmtEpoch(d.unlock_at)]);
+  if (d.resolved_at) rows.push([({ CONFIRMED: "Buyer confirmed delivery", AUTO_COMPLETED: "Completed automatically", LAPSED: "Lapsed without a dispute", CANCELLED: "Cancelled by the vendor", OFFER_EXPIRED: "Offer expired" })[d.outcome] || "Ruling: " + dealTone(d)[1], d.resolved_at, ""]);
+  return h("ol", { class: "timeline" }, rows.map(([t, at, sub], i) => h("li", { class: i === rows.length - 1 && !isDone(d) ? "now" : "done" }, h("span", { class: "b", "aria-hidden": "true" }), h("span", {}, t, h("small", { text: [at ? fmtEpoch(at) : "", sub].filter(Boolean).join(" · ") })))));
+}
+
+function dealActions(d, group, ui) {
+  const p = P(), t = nowSec();
+  const isV = same(account, d.seller), isB = same(account, d.buyer), isAdm = same(account, group?.admin);
+  const kids = [];
+  const note = (txt, cls = "callout") => kids.push(h("p", { class: cls + " small", text: txt }));
+  const btn = (label, cls, run) => h("button", { class: "btn " + cls, type: "button", text: label, onclick: (e) => runButton(e.currentTarget, run) });
+  const call = (label, fn, args, value = 0n) => write(ui, label, fn, args, value, () => {});
+  if (!account) kids.push(connectPrompt("Connect a wallet to act on this deal."));
+  const st = d.status;
+  const dep = BigInt(p.claim_deposit), ddep = BigInt(p.dispute_deposit);
+  if (st === "OPEN") {
+    if (isV) kids.push(btn("Cancel deal", "btn-danger", async () => { if (await confirmAction({ title: "Cancel this deal?", intro: "Your lock and the group's lock are released. This is final.", confirm: "Cancel deal", danger: true })) await call("cancel deal", "cancel_deal", [d.deal_id]); }));
+    else if (t > d.offer_expires) note("This offer has expired.");
+    else if (account && (isAdm || me.role === "vendor")) note(isAdm ? "The group admin cannot buy inside their own group." : "Vendors cannot claim payment on deals from other vendors with this account.");
+    else if (account) {
+      const ref = areaIn("payRef", "Bank transfer reference, wallet transaction or receipt text"); const f = field("Payment reference", ref, "5 to 300 characters. Describe how you paid the vendor off-chain. A checkable reference matters if the vendor stays silent.", { req: true });
+      kids.push(f, h("p", { class: "xs", text: `Needs a ${gen(dep)} refundable deposit. It comes back when the deal completes, but is burned if the vendor rejects your claim.` }),
+        btn("Claim payment", "btn-primary block", async () => {
+          const r = ref.value.trim();
+          if (r.length < 5 || r.length > 300) return f.setErr("Use 5 to 300 characters."); f.setErr("");
+          if (await confirmAction({ title: "Claim that you paid?", intro: "Only claim a payment you really made to this vendor.", rows: [["Deal", d.item], ["Price", d.price_text], ["Deposit", gen(dep)]], note: "The deposit is burned if the vendor rejects the claim.", confirm: "Claim payment" })) await call("payment claim", "claim_payment", [d.deal_id, r], dep);
+        }));
+    }
+    if (t > d.offer_expires) kids.push(btn("Expire this offer", "btn-secondary", () => call("expire offer", "expire_offer", [d.deal_id])));
+  } else if (st === "PAYMENT_CLAIMED") {
+    const left = d.claimed_at + p.confirm_window - t;
+    if (isV) {
+      const reason = textIn("rejWhy", "Why are you rejecting?", "", { maxlength: "200" }); const f = field("Reason, only if rejecting", reason, "5 to 200 characters.");
+      kids.push(h("p", { class: "small", text: `The buyer says they paid: ${d.payment_ref}` }), f,
+        h("div", { class: "actions" },
+          btn("Confirm payment", "btn-primary", async () => { if (await confirmAction({ title: "Confirm you received payment?", intro: "This binds the deal. The delivery window starts now and both locks stay frozen.", confirm: "Confirm payment" })) await call("payment confirmation", "respond_payment", [d.deal_id, true, ""]); }),
+          btn("Reject claim", "btn-danger", async () => {
+            const r = reason.value.trim(); if (r.length < 5 || r.length > 200) return f.setErr("Give a reason of 5 to 200 characters."); f.setErr("");
+            if (await confirmAction({ title: "Reject this claim?", intro: "The buyer's deposit is burned and they cannot claim this deal again.", confirm: "Reject claim", danger: true })) await call("claim rejection", "respond_payment", [d.deal_id, false, r]);
+          })));
+      note(left > 0 ? `You have ${dur(left)} to answer. If you stay silent the deal binds anyway, with buyer compensation capped at ${p.timeout_cap_bps / 100}%.` : "The answer window has passed; anyone can bind the deal now.", "callout warn");
+    } else if (isB) note("Waiting for the vendor to confirm your payment.");
+    else note("A buyer has claimed payment and the vendor has not answered yet.");
+    if (left <= 0) kids.push(btn("Bind the deal", "btn-secondary", () => call("bind", "bind_by_timeout", [d.deal_id])));
+  } else if (st === "ACTIVE" || st === "DELIVERED") {
+    const late = st === "ACTIVE" && t > d.delivery_deadline && t <= d.delivery_deadline + p.review_window;
+    const mismatch = st === "DELIVERED" && t <= d.delivered_at + p.review_window;
+    if (isV && st === "ACTIVE") {
+      const txt = areaIn("delTxt", "What was sent, when, how, tracking details"), url = textIn("delUrl", "https://… (optional)", "", { inputmode: "url" });
+      const fT = field("Delivery proof", txt, "3 to 1500 characters. This text is what validators weigh; links are stored but never opened.", { req: true }), fU = field("Proof link", url, "Optional, https only.");
+      kids.push(fT, fU, btn("Post delivery proof", "btn-primary block", async () => {
+        const x = txt.value.trim(), u = url.value.trim(); let bad = false;
+        if (x.length < 3 || x.length > 1500) { fT.setErr("Use 3 to 1500 characters."); bad = true; } else fT.setErr("");
+        if (u && !/^https:\/\/[^\s]{4,}$/.test(u)) { fU.setErr("Start the link with https://."); bad = true; } else fU.setErr("");
+        if (!bad) await call("delivery proof", "submit_delivery", [d.deal_id, x, u]);
+      }));
+      note(`Deliver by ${fmtEpoch(d.delivery_deadline)}. Late proof is still accepted, but the buyer can dispute after the deadline.`);
+    }
+    if (isB && st === "DELIVERED") kids.push(btn("Confirm delivery", "btn-primary block", async () => { if (await confirmAction({ title: "Confirm you received it?", intro: "This releases the vendor's and the group's locks and returns your deposit. It is final.", confirm: "Confirm delivery" })) await call("delivery confirmation", "confirm_delivery", [d.deal_id]); }));
+    if (isB && (late || mismatch)) {
+      const claim = areaIn("dispClaim", "What went wrong? Be specific."), url = textIn("dispUrl", "https://… (optional)", "", { inputmode: "url" });
+      const fC = field("Your dispute", claim, "10 to 1500 characters.", { req: true }), fU = field("Evidence link", url, "Optional, https only.");
+      kids.push(h("details", { class: "tune", open: late }, h("summary", { text: "Open a dispute" }), h("div", { style: "padding-bottom:8px" }, fC, fU,
+        h("p", { class: "xs", style: "margin-top:8px", text: `Needs a ${gen(ddep)} deposit, refunded unless the vendor wins.` }),
+        btn("Open dispute", "btn-danger block", async () => {
+          const x = claim.value.trim(), u = url.value.trim(); let bad = false;
+          if (x.length < 10 || x.length > 1500) { fC.setErr("Use 10 to 1500 characters."); bad = true; } else fC.setErr("");
+          if (u && !/^https:\/\/[^\s]{4,}$/.test(u)) { fU.setErr("Start the link with https://."); bad = true; } else fU.setErr("");
+          if (bad) return;
+          if (await confirmAction({ title: "Open a dispute?", intro: "Validators will weigh both sides' evidence. The ruling is final.", rows: [["Deposit", gen(ddep)]], note: "The deposit is lost if the vendor wins.", confirm: "Open dispute", danger: true })) await call("dispute", "open_dispute", [d.deal_id, x, u], ddep);
+        }))));
+    } else if (isB && st === "ACTIVE") note(`You can dispute after the delivery deadline (${fmtEpoch(d.delivery_deadline)}) if nothing arrives.`);
+    const over = st === "DELIVERED" ? t > d.delivered_at + p.review_window : t > d.delivery_deadline + p.review_window;
+    if (over) kids.push(btn(st === "DELIVERED" ? "Complete the deal" : "Close the lapsed deal", "btn-secondary", () => call("finalize", "finalize_deal", [d.deal_id])));
+    else if (!isB && !isV) note(st === "DELIVERED" ? `The buyer can confirm or dispute until ${fmtEpoch(d.delivered_at + p.review_window)}.` : `Waiting for delivery by ${fmtEpoch(d.delivery_deadline)}.`);
+  } else if (st === "DISPUTED" || st === "REOPENED" || st === "CHALLENGED") {
+    const open = t <= d.evidence_deadline;
+    const used = isB ? d.ev_buyer : d.ev_seller, cap = p.max_evidence_per_side + 2 * (d.reopened + (d.challenged ? 1 : 0));
+    if ((isB || isV) && open && used < cap) {
+      const txt = areaIn("evTxt", "Add evidence in your own words"), url = textIn("evUrl", "https://… (optional)", "", { inputmode: "url" });
+      const fT = field("Evidence", txt, `5 to 1500 characters. You have used ${used} of ${cap} pieces.`, { req: true }), fU = field("Link", url, "Optional, https only.");
+      kids.push(fT, fU, btn("Submit evidence", "btn-secondary block", async () => {
+        const x = txt.value.trim(), u = url.value.trim(); let bad = false;
+        if (x.length < 5 || x.length > 1500) { fT.setErr("Use 5 to 1500 characters."); bad = true; } else fT.setErr("");
+        if (u && !/^https:\/\/[^\s]{4,}$/.test(u)) { fU.setErr("Start the link with https://."); bad = true; } else fU.setErr("");
+        if (!bad) await call("evidence", "submit_evidence", [d.deal_id, x, u]);
+      }));
+    }
+    if (open) note(`Evidence is open until ${fmtEpoch(d.evidence_deadline)} (${dur(d.evidence_deadline - t)} left).`);
+    if (!open) {
+      kids.push(btn("Ask validators to rule", "btn-primary block", () => call("ruling", "resolve_dispute", [d.deal_id])), h("p", { class: "xs", text: "Anyone can trigger the ruling. Validators read the evidence and must agree, so this can take a few minutes." }));
+      if (t > d.evidence_deadline + p.stall_window) kids.push(btn("Close the stalled dispute", "btn-secondary", () => call("close stalled", "close_stalled_dispute", [d.deal_id])));
+    }
+  } else if (st === "PAYOUT_PENDING") {
+    note(`Validators favoured the buyer on a deal bound by vendor silence. Compensation of ${gen(d.pending_comp, 2)} unlocks ${fmtEpoch(d.unlock_at)} unless the vendor challenges.`, "callout warn");
+    if (isV && t < d.unlock_at) {
+      const txt = areaIn("chTxt", "Why is the buyer's claim wrong?"), url = textIn("chUrl", "https://… (optional)", "", { inputmode: "url" });
+      const fT = field("Challenge", txt, "5 to 1500 characters. A challenge forces a final second review.", { req: true }), fU = field("Link", url, "Optional, https only.");
+      kids.push(fT, fU, btn("Challenge the payout", "btn-danger block", async () => {
+        const x = txt.value.trim(), u = url.value.trim(); let bad = false;
+        if (x.length < 5 || x.length > 1500) { fT.setErr("Use 5 to 1500 characters."); bad = true; } else fT.setErr("");
+        if (u && !/^https:\/\/[^\s]{4,}$/.test(u)) { fU.setErr("Start the link with https://."); bad = true; } else fU.setErr("");
+        if (!bad && (await confirmAction({ title: "Challenge this payout?", intro: "Validators review everything again and that second ruling is final.", confirm: "Challenge", danger: true }))) await call("challenge", "challenge_payout", [d.deal_id, x, u]);
+      }));
+    }
+    if (t >= d.unlock_at) kids.push(btn("Pay out now", "btn-primary block", () => call("payout", "finalize_payout", [d.deal_id])));
+  } else if (isB || isV) note("This deal is finished. Check the Account page for anything you can claim.");
+  else note("This deal is finished.");
+  return h("div", { class: "panel stack" }, h("h2", { text: "Actions" }), ...kids, ui.el);
+}
+
+async function viewDeal(root, id, tok) {
+  put(root, skel(160), skel(200));
+  const d = await readJson("get_deal", [id]);
+  if (tok !== routeTok) return;
+  if (!d) { put(root, h("div", { class: "panel" }, empty("Deal not found", "There is no deal with this number on this contract.", h("a", { class: "btn btn-secondary", href: "#/deals", text: "All deals" })))); return; }
+  const [g, ev] = await Promise.all([readJson("get_group", [d.group]), d.ev_buyer + d.ev_seller > 0 ? readJson("get_evidence", [id]) : []]);
+  if (tok !== routeTok) return;
+  const ui = txPanel();
+  const role = same(account, d.seller) ? "You are the vendor on this deal." : same(account, d.buyer) ? "You are the buyer on this deal." : same(account, g?.admin) ? "You are the admin of this deal's group." : null;
+  const facts = h("div", { class: "panel stack" },
+    h("div", { class: "row between wrap" }, h("span", { class: "row wrap" }, dealChip(d), chip("plain", d.deal_id)), g ? h("a", { class: "btn btn-ghost sm", href: "#/group/" + g.slug, text: g.name }) : null),
+    kv([["Price", d.price_text], ["Protected amount", gen(d.protect, 3)], ["Vendor", addrLine(d.seller, "vendor address")], d.buyer ? ["Buyer", addrLine(d.buyer, "buyer address")] : null,
+      ["Vendor lock", gen(d.vendor_lock, 3)], ["Group pool lock", gen(d.group_lock, 3)], safeUrl(d.listing_url) ? ["Listing", linkOrText(d.listing_url)] : null,
+      d.status === "OPEN" ? ["Offer expires", fmtEpoch(d.offer_expires)] : null, d.delivery_deadline ? ["Deliver by", fmtEpoch(d.delivery_deadline)] : ["Delivery window", dur(d.delivery_secs) + " after payment is confirmed"],
+      d.bound_by === "timeout" ? ["Payment status", "Bound by vendor silence. Compensation capped at " + d.comp_cap_bps / 100 + "%."] : d.bound_by === "seller" ? ["Payment status", "Confirmed by the vendor"] : null]),
+    h("div", {}, h("p", { class: "label", text: "Shared liability" }), splitBar(BigInt(d.protect))));
+  const proof = d.delivery_text ? h("div", { class: "panel stack" }, h("h2", { text: "Delivery proof" }), h("p", { class: "break", style: "white-space:pre-wrap", text: d.delivery_text }), safeUrl(d.delivery_url) ? h("p", { class: "small" }, linkOrText(d.delivery_url)) : null) : null;
+  const evidence = ev.length ? h("div", { class: "panel" }, h("h2", { text: "Evidence" }), ev.map((e) => h("div", { class: "ev" }, h("div", { class: "who" }, chip(e.side === "buyer" ? "info" : "sig", e.side === "buyer" ? "Buyer" : "Vendor"), h("span", { text: fmtEpoch(e.at) }), h("span", { class: "addr", title: e.digest, text: "sha256 " + e.digest.slice(0, 10) + "…" })), h("p", { class: "break", style: "white-space:pre-wrap", text: e.text }), safeUrl(e.url) ? h("p", { class: "small" }, linkOrText(e.url)) : null))) : null;
+  let verdict = null;
+  if (d.verdict) {
+    const paid = BigInt(d.paid_vendor) + BigInt(d.paid_group);
+    verdict = h("div", { class: "panel stack" }, h("h2", { text: d.status === "RESOLVED" ? "Ruling" : "Latest review" }),
+      kv([["Verdict", d.verdict.replace(/_/g, " ").toLowerCase()], ["Reason code", d.reason_code.replace(/_/g, " ").toLowerCase()], ["Validators' reason", d.reason || "-"],
+        d.status === "RESOLVED" ? ["Compensation to buyer", gen(d.compensation, 3)] : null, d.status === "RESOLVED" && paid > 0n ? ["Paid by vendor lock", gen(d.paid_vendor, 3)] : null, d.status === "RESOLVED" && paid > 0n ? ["Paid by group pool", gen(d.paid_group, 3)] : null, d.status === "RESOLVED" && BigInt(d.fee) > 0n ? ["Protocol fee (5%)", gen(d.fee, 3)] : null]),
+      d.status === "REOPENED" ? h("p", { class: "callout small", text: "Evidence was not enough, so the dispute was reopened once with extra evidence slots." }) : null);
+  }
+  put(root, h("div", { class: "stack-lg" }, pageHead(d.item, null, ["#/deals", "All deals"]),
+    role ? h("p", { class: "callout", text: role }) : null,
+    h("div", { class: "cols act-first" }, h("div", { class: "stack-lg" }, facts, h("div", { class: "panel" }, h("h2", { text: "Timeline" }), timelineFor(d)), proof, evidence, verdict),
+      h("div", { class: "sticky" }, dealActions(d, g, ui)))));
+}
+
+async function viewAccount(root, tok) {
+  if (!account) { put(root, pageHead("Account", "Your role, deals and claimable balance."), connectPrompt("Connect a wallet to see your account.")); return; }
+  put(root, skel(120), skel(160));
+  const a = account.toLowerCase();
+  const [claimable, deals, acc] = await Promise.all([read("get_claimable", [a]), readJson("deals_of", [a]), readJson("get_accounting")]);
+  if (tok !== routeTok) return;
+  const ui = txPanel();
+  const amt = BigInt(claimable || "0");
+  const roleText = me.role === "admin" ? ["Group admin", h("a", { href: "#/group/" + me.group, text: "@" + me.group })] : me.role === "vendor" ? ["Vendor", h("a", { href: "#/sell", text: "Open vendor page" })] : ["Role", "Buyer or visitor"];
+  const claim = h("div", { class: "panel stack" }, h("h2", { text: "Claimable balance" }), h("p", { class: "price num", style: "font-size:30px;font-weight:700", text: gen(amt, 4) }),
+    h("p", { class: "muted small", text: "Compensation, returned deposits, withdrawn bond or pool and refunded values wait here until you claim them." }),
+    h("button", { class: "btn btn-primary", type: "button", disabled: amt === 0n, text: "Claim to wallet", onclick: (e) => runButton(e.currentTarget, async () => { await write(ui, "claim", "claim", [], 0n, () => {}); }) }), ui.el);
+  let owner = null;
+  if (same(account, P().owner)) {
+    const ui2 = txPanel();
+    owner = h("div", { class: "panel stack" }, h("h2", { text: "Contract owner" }), kv([["Fees collected so far", gen(acc.treasury, 3)], ["Burned deposits", gen(acc.burned, 3)]]),
+      h("button", { class: "btn btn-secondary", type: "button", text: "Move fees to my balance", onclick: (e) => runButton(e.currentTarget, async () => { await write(ui2, "fee collection", "collect_fees", [], 0n, () => {}); }) }), ui2.el);
+  }
+  put(root, h("div", { class: "stack-lg" }, pageHead("Account", null),
+    h("div", { class: "cols" }, h("div", { class: "stack-lg" }, h("div", { class: "panel stack" }, kv([["Address", addrLine(account, "your address")], roleText, ["Wallet", walletKind === "test" ? "Test session" : walletKind === "key" ? "Private key" : "Browser wallet"]])),
+      h("section", {}, h("h2", { style: "margin-bottom:12px", text: "Your deals" }), deals.length ? h("div", { class: "cards" }, deals.map((d) => dealCard(d))) : empty("No deals yet", "Deals you sell or buy will show up here."))),
+      h("div", { class: "stack-lg" }, claim, owner))));
+}
+
+/* ---------- router ---------- */
+const TABS = [["", "home", "Home"], ["groups", "groups", "Groups"], ["deals", "deals", "Deals"], ["sell", "bag", "Sell"], ["account", "user", "Account"]];
+function drawTabs(cur) {
+  put($("tabs"), TABS.map(([k, ic, label]) => h("li", {}, h("a", { class: "tab", href: "#/" + k, "aria-current": cur === k || (k === "groups" && cur === "group") || (k === "deals" && cur === "deal") || (k === "sell" && cur === "start") ? "page" : null }, icon(ic, 22), label))));
+}
+let routeTok = 0, lastAccount = null;
+async function route() {
+  const tok = ++routeTok;
+  const raw = location.hash.replace(/^#/, "") || "/";
+  const [path, query] = raw.split("?");
+  const parts = path.split("/").filter(Boolean).map((x) => { try { return decodeURIComponent(x); } catch (e) { return x; } });
+  const q = new URLSearchParams(query || "");
+  const root = $("app");
+  drawTabs(parts[0] || "");
+  window.scrollTo(0, 0);
+  if (gate(root)) return;
+  if (!state.params) { put(root, skel(200)); await boot(); if (tok !== routeTok) return; if (gate(root)) return; }
+  await loadMe();
+  if (tok !== routeTok) return;
+  try {
+    const r = parts[0] || "";
+    if (r === "") await viewHome(root, tok);
+    else if (r === "groups") await viewGroups(root, q, tok);
+    else if (r === "group" && parts[1]) await viewGroup(root, parts[1].toLowerCase(), tok);
+    else if (r === "start") await viewStart(root, tok);
+    else if (r === "sell") await viewSell(root, (parts[1] || "").toLowerCase(), tok);
+    else if (r === "deals") await viewDeals(root, q, tok);
+    else if (r === "deal" && parts[1]) await viewDeal(root, parts[1], tok);
+    else if (r === "account") await viewAccount(root, tok);
+    else put(root, h("div", { class: "panel" }, empty("Page not found", "That address does not exist.", h("a", { class: "btn btn-primary", href: "#/", text: "Go home" }))));
+  } catch (e) {
+    if (tok !== routeTok) return;
+    put(root, h("div", { class: "panel stack measure", role: "alert" }, h("h1", { text: "Something went wrong" }), h("p", { class: "muted", text: explain(e) }), h("button", { class: "btn btn-primary", type: "button", text: "Try again", onclick: () => route() })));
+  }
+  if (tok === routeTok) $("app").focus({ preventScroll: true });
+}
+window.addEventListener("hashchange", route);
+if (readTestKey()) { try { startTestSession(true); } catch (e) {} }
+drawWallet();
+boot().then(route);
+</script>
+</body>
+</html>
