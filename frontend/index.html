@@ -460,6 +460,7 @@ function genStr(w, dp = 3) {
   return (neg ? "-" : "") + whole + (frac ? "." + frac : "");
 }
 const gen = (w, dp) => genStr(w, dp) + " GEN";
+const plural = (n, one, many) => n + " " + (Number(n) === 1 ? one : many);
 const fmtEpoch = (e) => { if (!Number(e)) return "-"; try { return new Date(Number(e) * 1000).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" }); } catch (x) { return String(e); } };
 function dur(sec) {
   sec = Math.max(0, Math.floor(sec));
@@ -906,8 +907,8 @@ function groupCard(g) {
   const lvl = { GUARDIAN: "pos", STEADY: "sig", NEW: "plain" }[g.level];
   return h("a", { class: "card e-sig", href: "#/group/" + g.slug },
     h("div", { class: "row between" }, h("span", { class: "t", text: g.name }), chip(lvl, g.level.charAt(0) + g.level.slice(1).toLowerCase())),
-    h("div", { class: "m" }, h("span", { text: PLAT[g.platform] || g.platform }), h("span", { text: g.vendors_approved + " vendors" }), h("span", { text: "Score " + g.score })),
-    h("div", { class: "m" }, h("span", { text: "Free pool " + gen(g.free, 1) }), h("span", { text: g.active_deals + " live deals" })));
+    h("div", { class: "m" }, h("span", { text: PLAT[g.platform] || g.platform }), h("span", { text: plural(g.vendors_approved, "vendor", "vendors") }), h("span", { text: "Score " + g.score })),
+    h("div", { class: "m" }, h("span", { text: "Free pool " + gen(g.free, 2) }), h("span", { text: plural(g.active_deals, "live deal", "live deals") })));
 }
 function eventFor(d, gname) {
   const [tone, label] = dealTone(d);
@@ -934,10 +935,10 @@ async function viewHome(root, tok) {
         ? [h("b", {}, icon("check", 16), "Balanced"), h("span", { class: "num", text: `Contract holds ${gen(held, 2)}, equal to bonds + pools + claims + deposits.` })]
         : [h("b", { text: "Check needed" }), h("span", { class: "num", text: `Tracked ${gen(acc.tracked, 2)} but the contract holds ${gen(held, 2)}.` })]);
   const strip = h("div", { class: "strip" },
-    h("div", { class: "stat" }, h("b", { class: "num", text: String(stats.groups) }), h("span", { text: "Groups" }), h("span", { class: "sub", text: stats.vendors + " vendors" })),
+    h("div", { class: "stat" }, h("b", { class: "num", text: String(stats.groups) }), h("span", { text: "Groups" }), h("span", { class: "sub", text: plural(stats.vendors, "vendor", "vendors") })),
     h("div", { class: "stat" }, h("b", { class: "num", text: genStr(stats.protected_open, 2) }), h("span", { text: "GEN protected now" }), h("span", { class: "sub", text: stats.active + stats.disputed + " live deals" })),
     h("div", { class: "stat" }, h("b", { class: "num", text: String(stats.deals) }), h("span", { text: "Deals" }), h("span", { class: "sub", text: stats.completed + stats.resolved + " settled" })),
-    h("div", { class: "stat" }, h("b", { class: "num", text: genStr(stats.paid_to_buyers, 2) }), h("span", { text: "GEN paid to buyers" }), h("span", { class: "sub", text: stats.resolved + " rulings" })));
+    h("div", { class: "stat" }, h("b", { class: "num", text: genStr(stats.paid_to_buyers, 2) }), h("span", { text: "GEN paid to buyers" }), h("span", { class: "sub", text: plural(stats.resolved, "ruling", "rulings") })));
   const hero = h("section", { class: "hero" },
     h("div", {},
       h("span", { class: "live" + (stats.groups ? "" : " off") }, h("i", { "aria-hidden": "true" }), h("span", {}, h("b", { text: stats.groups + (stats.groups === 1 ? " group" : " groups") }), " live on Studio")),
