@@ -963,6 +963,19 @@ contract GroupBondBase is GroupBondStore {
     function _settle(Deal storage d, Verdict verdict, bytes32 code, string memory reason, bool reviewed) internal {
         Vendor storage v = vendors[d.seller];
         Group storage g = groups[d.groupKey];
+        _pay(d, v, g, verdict, reviewed);
+        _tally(d, v, g, verdict);
+        d.verdict = verdict;
+        d.reasonCode = code;
+        d.reason = reason;
+        d.paymentEvidenceReviewed = reviewed;
+        d.resolvedAt = uint64(block.timestamp);
+        d.status = Status.RESOLVED;
+        emit Resolved(d.id, verdict, code, d.compensation, reviewed);
+        emit DealStatus(d.id, d.status);
+    }
+
+    function _pay(Deal storage d, Vendor storage v, Group storage g, Verdict verdict, bool reviewed) internal {
         uint256 comp = _compFor(d, verdict, reviewed);
         uint256 fee = (comp * FEE_BPS) / 10000;
         uint256 total = comp + fee;
@@ -978,10 +991,17 @@ contract GroupBondBase is GroupBondStore {
             v.compensated += vpay;
             g.compensated += gpay;
         }
+        d.compensation = comp;
+        d.fee = fee;
+        d.paidVendor = vpay;
+        d.paidGroup = gpay;
+        d.pendingComp = 0;
+    }
+
+    function _tally(Deal storage d, Vendor storage v, Group storage g, Verdict verdict) internal {
         uint256 dep = d.deposit;
         depositsHeld -= dep;
         _returnClaimDeposit(d, verdict == Verdict.SELLER_WINS);
-        d.pendingComp = 0;
         if (verdict == Verdict.SELLER_WINS) {
             _credit(d.seller, dep);
             v.disputesWon += 1;
@@ -1004,18 +1024,6 @@ contract GroupBondBase is GroupBondStore {
                 g.inconclusive += 1;
             }
         }
-        d.verdict = verdict;
-        d.reasonCode = code;
-        d.reason = reason;
-        d.paymentEvidenceReviewed = reviewed;
-        d.compensation = comp;
-        d.fee = fee;
-        d.paidVendor = vpay;
-        d.paidGroup = gpay;
-        d.resolvedAt = uint64(block.timestamp);
-        d.status = Status.RESOLVED;
-        emit Resolved(d.id, verdict, code, comp, reviewed);
-        emit DealStatus(d.id, d.status);
     }
 
     function claim() external nonReentrant {
