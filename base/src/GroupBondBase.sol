@@ -193,7 +193,7 @@ abstract contract GroupBondStore {
     mapping(bytes32 => uint256) public pairCounts;
     mapping(bytes32 => bool) internal rejectedClaim;
 
-    uint256 private lockFlag = 1;
+    uint256 internal lockFlag = 1;
 
     function _f(E e) internal pure {
         revert Err(e);
