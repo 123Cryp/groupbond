@@ -80,11 +80,26 @@ def render():
     for name in PUBLIC_CONSTS:
         abi.append({"type": "function", "name": name, "stateMutability": "view", "inputs": [], "outputs": [{"name": "", "type": "uint256"}]})
     abi.append({"type": "function", "name": "claimable", "stateMutability": "view", "inputs": [{"name": "", "type": "address"}], "outputs": [{"name": "", "type": "uint256"}]})
+    abi.append({"type": "error", "name": "Err", "inputs": [{"name": "code", "type": "uint8"}]})
     names = {a["name"] for a in abi}
     missing = [n for n in EXPORT if n not in names]
     if missing:
         raise SystemExit("missing in source: " + ", ".join(missing))
     return json.dumps(abi, separators=(",", ":"))
+
+
+def error_names():
+    src = SRC.read_text()
+    body = re.search(r"enum E \{(.*?)\}", src, re.S).group(1)
+    return [n.strip() for n in body.split(",") if n.strip()]
+
+
+def snake(name):
+    return re.sub(r"(?<!^)(?=[A-Z])", "_", name).lower()
+
+
+def render_errors():
+    return json.dumps([snake(n) for n in error_names()], separators=(",", ":"))
 
 
 if __name__ == "__main__":

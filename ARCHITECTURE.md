@@ -43,6 +43,6 @@ Header lines are exactly the version line and the Depends line. No comments or d
 ## Base port
 
 - `GroupBondBase.sol` mirrors the Python state machine: same statuses, same lock maths, same payout order (vendor first, then pool).
-- Differences: disputes are ruled by `arbiter` through `resolveDispute(id, verdict, reasonCode, reason, paymentEvidenceReviewed)`. The arbiter is frozen per dispute when it is opened, and a change of arbiter is timelocked. Bad input reverts instead of returning `REFUNDED:`.
+- Differences: disputes are ruled by `arbiter` through `resolveDispute(id, verdict, reasonCode, reason, paymentEvidenceReviewed)`. The arbiter and owner are immutable and fixed at deploy (use a multisig), so there is no rotation. Bad input reverts with a compact custom error `Err(code)` instead of returning `REFUNDED:`; the frontend maps codes to the same reason keys. Scores, levels and `free` are derived in the frontend rather than stored on-chain, to stay under the EIP-170 size limit.
 - A silent-bound deal whose buyer win is not flagged as reviewed is downgraded to INSUFFICIENT_EVIDENCE, as in the Python contract.
 - `tests/parity_scenarios.json` holds 76 dispute scenarios computed by an independent model in `scripts/gen_parity.py`. The Python suite replays them against the GenLayer contract and `ParityScenarios.t.sol` replays them against the Solidity contract.

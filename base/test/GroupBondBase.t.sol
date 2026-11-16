@@ -91,6 +91,10 @@ contract GroupBondBaseTest is Test {
         gb.resolveDispute(id, v, bytes32("CONFLICTING_EVIDENCE"), "ok", reviewed);
     }
 
+    function _rv(GroupBondBase.E e) internal {
+        vm.expectRevert(abi.encodeWithSelector(GroupBondBase.Err.selector, e));
+    }
+
     function _eq(uint256 a, uint256 b) internal pure {
         assertEq(a, b);
     }
@@ -111,27 +115,26 @@ contract GroupBondBaseTest is Test {
     }
 
     function test_create_group_and_validation() public {
-        vm.expectRevert(bytes("invalid slug"));
+        _rv(GroupBondBase.E.InvalidSlug);
         vm.prank(admin);
         gb.createGroup{value: 20 * U}("Bad Slug", "Deal Hub", 0, "");
-        vm.expectRevert(bytes("pool below minimum"));
+        _rv(GroupBondBase.E.PoolBelowMinimum);
         vm.prank(admin);
         gb.createGroup{value: U}("deal_hub", "Deal Hub", 0, "");
-        vm.expectRevert(bytes("invalid platform"));
+        _rv(GroupBondBase.E.InvalidPlatform);
         vm.prank(admin);
         gb.createGroup{value: 20 * U}("deal_hub", "Deal Hub", 9, "");
-        vm.expectRevert(bytes("bad url"));
+        _rv(GroupBondBase.E.BadUrl);
         vm.prank(admin);
         gb.createGroup{value: 20 * U}("deal_hub", "Deal Hub", 0, "http://t.me/x");
         _group(20 * U);
         GroupBondBase.GroupInfo memory g = gb.groupInfo("deal_hub");
         assertEq(g.admin, admin);
         _eq(g.pool, 20 * U);
-        _eq(g.level, 1);
-        vm.expectRevert(bytes("slug taken"));
+        _rv(GroupBondBase.E.SlugTaken);
         vm.prank(other);
         gb.createGroup{value: 20 * U}("deal_hub", "Deal Hub", 0, "");
-        vm.expectRevert(bytes("already admin"));
+        _rv(GroupBondBase.E.AlreadyAdmin);
         vm.prank(admin);
         gb.createGroup{value: 20 * U}("second_hub", "Second Hub", 0, "");
         _accounting();
@@ -139,15 +142,15 @@ contract GroupBondBaseTest is Test {
 
     function test_vendor_and_admin_roles_are_exclusive() public {
         _group(20 * U);
-        vm.expectRevert(bytes("admin cannot sell"));
+        _rv(GroupBondBase.E.AdminCannotSell);
         vm.prank(admin);
         gb.joinGroup{value: 5 * U}("deal_hub", "admin_shop");
         vm.prank(vendor);
         gb.joinGroup{value: 5 * U}("deal_hub", "shop_one");
-        vm.expectRevert(bytes("already vendor"));
+        _rv(GroupBondBase.E.AlreadyVendor);
         vm.prank(vendor);
         gb.createGroup{value: 20 * U}("vendor_hub", "Vendor Hub", 0, "");
-        vm.expectRevert(bytes("handle taken"));
+        _rv(GroupBondBase.E.HandleTaken);
         vm.prank(other);
         gb.joinGroup{value: 5 * U}("deal_hub", "shop_one");
     }
@@ -157,10 +160,10 @@ contract GroupBondBaseTest is Test {
         vm.prank(vendor);
         gb.joinGroup{value: 10 * U}("deal_hub", "shop_one");
         _eq(uint8(gb.vendorInfo(vendor).status), uint8(GroupBondBase.VendorStatus.PENDING));
-        vm.expectRevert(bytes("vendor is not approved"));
+        _rv(GroupBondBase.E.VendorIsNotApproved);
         vm.prank(vendor);
         gb.createDeal("Red handbag", "40 USD", "", 2 * U, 48);
-        vm.expectRevert(bytes("not a group admin"));
+        _rv(GroupBondBase.E.NotAGroupAdmin);
         vm.prank(other);
         gb.approveVendor(vendor);
         vm.prank(admin);
@@ -178,7 +181,7 @@ contract GroupBondBaseTest is Test {
         gb.createGroup{value: 20 * U}("other_hub", "Other Hub", 1, "");
         vm.prank(vendor);
         gb.joinGroup{value: 10 * U}("deal_hub", "shop_one");
-        vm.expectRevert(bytes("vendor is not in your group"));
+        _rv(GroupBondBase.E.VendorIsNotInYourGroup);
         vm.prank(other);
         gb.approveVendor(vendor);
     }
@@ -191,7 +194,7 @@ contract GroupBondBaseTest is Test {
         _eq(d.groupLock, 2400000000000000);
         _eq(gb.vendorInfo(vendor).locked, 2 * U);
         _eq(gb.groupInfo("deal_hub").locked, 2400000000000000);
-        vm.expectRevert(bytes("protect above level cap"));
+        _rv(GroupBondBase.E.ProtectAboveLevelCap);
         vm.prank(vendor);
         gb.createDeal("Big handbag", "40 USD", "", 16 * U, 48);
         _accounting();
@@ -202,7 +205,7 @@ contract GroupBondBaseTest is Test {
         _vendor(30 * U);
         vm.prank(vendor);
         gb.createDeal("Red handbag", "40 USD", "", 10 * U, 48);
-        vm.expectRevert(bytes("not enough free group pool"));
+        _rv(GroupBondBase.E.NotEnoughFreeGroupPool);
         vm.prank(vendor);
         gb.createDeal("Blue handbag", "40 USD", "", 10 * U, 48);
     }
@@ -214,7 +217,7 @@ contract GroupBondBaseTest is Test {
         gb.cancelDeal(a);
         _locks(a);
         uint256 b = _deal(4 * U);
-        vm.expectRevert(bytes("offer has not expired"));
+        _rv(GroupBondBase.E.OfferHasNotExpired);
         gb.expireOffer(b);
         vm.warp(block.timestamp + 72 * H + 1);
         gb.expireOffer(b);
@@ -243,7 +246,7 @@ contract GroupBondBaseTest is Test {
         _eq(gb.burned(), U);
         _eq(gb.treasury(), 0);
         _eq(gb.claimable(vendor), 0);
-        vm.expectRevert(bytes("claim was rejected"));
+        _rv(GroupBondBase.E.ClaimWasRejected);
         vm.prank(buyer);
         gb.claimPayment{value: U}(id, "bank ref 654321");
         _claim(id, other);
@@ -254,16 +257,16 @@ contract GroupBondBaseTest is Test {
     function test_claim_rules() public {
         _market();
         uint256 id = _deal(4 * U);
-        vm.expectRevert(bytes("wrong deposit"));
+        _rv(GroupBondBase.E.WrongDeposit);
         vm.prank(buyer);
         gb.claimPayment{value: 2 * U}(id, "bank ref 123456");
-        vm.expectRevert(bytes("vendor cannot buy own deal"));
+        _rv(GroupBondBase.E.VendorCannotBuyOwnDeal);
         vm.prank(vendor);
         gb.claimPayment{value: U}(id, "bank ref 123456");
-        vm.expectRevert(bytes("admin cannot buy in own group"));
+        _rv(GroupBondBase.E.AdminCannotBuyInOwnGroup);
         vm.prank(admin);
         gb.claimPayment{value: U}(id, "bank ref 123456");
-        vm.expectRevert(bytes("payment ref length"));
+        _rv(GroupBondBase.E.PaymentRefLength);
         vm.prank(buyer);
         gb.claimPayment{value: U}(id, "abc");
     }
@@ -272,7 +275,7 @@ contract GroupBondBaseTest is Test {
         _market();
         uint256 id = _deal(4 * U);
         _claim(id, buyer);
-        vm.expectRevert(bytes("vendor still has time"));
+        _rv(GroupBondBase.E.VendorStillHasTime);
         gb.bindByTimeout(id);
         vm.warp(block.timestamp + 24 * H);
         gb.bindByTimeout(id);
@@ -281,7 +284,7 @@ contract GroupBondBaseTest is Test {
 
     function test_auto_finalize_and_lapse() public {
         uint256 id = _delivered(4 * U);
-        vm.expectRevert(bytes("review window still open"));
+        _rv(GroupBondBase.E.ReviewWindowStillOpen);
         gb.finalizeDeal(id);
         vm.warp(block.timestamp + 72 * H + 1);
         gb.finalizeDeal(id);
@@ -324,7 +327,7 @@ contract GroupBondBaseTest is Test {
         _eq(gb.groupInfo("deal_hub").vendorsApproved, 0);
         _eq(gb.groupInfo("deal_hub").disputesLost, 1);
         _eq(gb.getProtection(vendor), 0);
-        vm.expectRevert(bytes("vendor is not approved"));
+        _rv(GroupBondBase.E.VendorIsNotApproved);
         vm.prank(vendor);
         gb.createDeal("Blue handbag", "40 USD", "", 2 * U, 24);
     }
@@ -388,7 +391,7 @@ contract GroupBondBaseTest is Test {
     function test_stalled_dispute_closes_without_payout() public {
         uint256 id = _disputed(4 * U);
         vm.warp(block.timestamp + 48 * H + 1);
-        vm.expectRevert(bytes("arbiter still has time"));
+        _rv(GroupBondBase.E.ArbiterStillHasTime);
         gb.closeStalledDispute(id);
         vm.warp(block.timestamp + 168 * H + 1);
         gb.closeStalledDispute(id);
@@ -400,30 +403,30 @@ contract GroupBondBaseTest is Test {
 
     function test_dispute_guards() public {
         uint256 id = _delivered(4 * U);
-        vm.expectRevert(bytes("only buyer"));
+        _rv(GroupBondBase.E.OnlyBuyer);
         vm.prank(stranger);
         gb.openDispute{value: U}(id, "parcel never arrived at all", "");
-        vm.expectRevert(bytes("wrong deposit"));
+        _rv(GroupBondBase.E.WrongDeposit);
         vm.prank(buyer);
         gb.openDispute{value: 2 * U}(id, "parcel never arrived at all", "");
-        vm.expectRevert(bytes("claim length"));
+        _rv(GroupBondBase.E.ClaimLength);
         vm.prank(buyer);
         gb.openDispute{value: U}(id, "short", "");
-        vm.expectRevert(bytes("bad url"));
+        _rv(GroupBondBase.E.BadUrl);
         vm.prank(buyer);
         gb.openDispute{value: U}(id, "parcel never arrived at all", "http://x.example.com/a");
         vm.warp(block.timestamp + 72 * H + 1);
-        vm.expectRevert(bytes("not disputable now"));
+        _rv(GroupBondBase.E.NotDisputableNow);
         vm.prank(buyer);
         gb.openDispute{value: U}(id, "parcel never arrived at all", "");
     }
 
     function test_only_arbiter_resolves_and_only_after_window() public {
         uint256 id = _disputed(4 * U);
-        vm.expectRevert(bytes("only arbiter"));
+        _rv(GroupBondBase.E.OnlyArbiter);
         vm.prank(stranger);
         gb.resolveDispute(id, GroupBondBase.Verdict.SPLIT, bytes32("X"), "x", true);
-        vm.expectRevert(bytes("evidence window open"));
+        _rv(GroupBondBase.E.EvidenceWindowOpen);
         vm.prank(arbiter);
         gb.resolveDispute(id, GroupBondBase.Verdict.SPLIT, bytes32("X"), "x", true);
     }
@@ -433,7 +436,7 @@ contract GroupBondBaseTest is Test {
         vm.startPrank(buyer);
         gb.submitEvidence(id, "second piece of proof", "");
         gb.submitEvidence(id, "third piece of proof", "");
-        vm.expectRevert(bytes("evidence limit"));
+        _rv(GroupBondBase.E.EvidenceLimit);
         gb.submitEvidence(id, "fourth piece of proof", "");
         vm.stopPrank();
         vm.warp(block.timestamp + 48 * H + 1);
@@ -441,7 +444,7 @@ contract GroupBondBaseTest is Test {
         vm.startPrank(buyer);
         gb.submitEvidence(id, "fourth piece of proof", "");
         gb.submitEvidence(id, "fifth piece of proof", "");
-        vm.expectRevert(bytes("evidence limit"));
+        _rv(GroupBondBase.E.EvidenceLimit);
         gb.submitEvidence(id, "sixth piece of proof", "");
         vm.stopPrank();
     }
@@ -449,12 +452,12 @@ contract GroupBondBaseTest is Test {
     function test_withdraw_limited_by_lock() public {
         _market();
         _deal(4 * U);
-        vm.expectRevert(bytes("amount exceeds free bond"));
+        _rv(GroupBondBase.E.AmountExceedsFreeBond);
         vm.prank(vendor);
         gb.withdrawBond(9 * U);
         vm.prank(vendor);
         gb.withdrawBond(8 * U);
-        vm.expectRevert(bytes("amount exceeds free pool"));
+        _rv(GroupBondBase.E.AmountExceedsFreePool);
         vm.prank(admin);
         gb.withdrawPool(18 * U);
         vm.prank(admin);
@@ -469,7 +472,7 @@ contract GroupBondBaseTest is Test {
     function test_remove_vendor_needs_no_active_deals_and_is_final() public {
         _market();
         uint256 id = _deal(4 * U);
-        vm.expectRevert(bytes("vendor has active deals"));
+        _rv(GroupBondBase.E.VendorHasActiveDeals);
         vm.prank(admin);
         gb.removeVendor(vendor);
         vm.prank(vendor);
@@ -477,10 +480,10 @@ contract GroupBondBaseTest is Test {
         vm.prank(admin);
         gb.removeVendor(vendor);
         _eq(gb.groupInfo("deal_hub").vendorsApproved, 0);
-        vm.expectRevert(bytes("vendor cannot be approved now"));
+        _rv(GroupBondBase.E.VendorCannotBeApprovedNow);
         vm.prank(admin);
         gb.approveVendor(vendor);
-        vm.expectRevert(bytes("already removed"));
+        _rv(GroupBondBase.E.AlreadyRemoved);
         vm.prank(vendor);
         gb.leaveGroup();
     }
@@ -492,7 +495,7 @@ contract GroupBondBaseTest is Test {
         _eq(uint8(d.status), uint8(GroupBondBase.Status.PAYOUT_PENDING));
         _eq(d.pendingComp, U);
         _eq(gb.claimable(buyer), 0);
-        vm.expectRevert(bytes("payout is still locked"));
+        _rv(GroupBondBase.E.PayoutIsStillLocked);
         gb.finalizePayout(id);
         vm.warp(block.timestamp + 168 * H);
         gb.finalizePayout(id);
@@ -515,7 +518,7 @@ contract GroupBondBaseTest is Test {
     function test_vendor_can_challenge_pending_payout() public {
         uint256 id = _silentDisputed(4 * U);
         _rule(id, GroupBondBase.Verdict.BUYER_WINS, true);
-        vm.expectRevert(bytes("only vendor"));
+        _rv(GroupBondBase.E.OnlyVendor);
         vm.prank(buyer);
         gb.challengePayout(id, "I never saw this payment", "");
         vm.prank(vendor);
@@ -533,7 +536,7 @@ contract GroupBondBaseTest is Test {
         uint256 id = _silentDisputed(4 * U);
         _rule(id, GroupBondBase.Verdict.BUYER_WINS, true);
         vm.warp(block.timestamp + 168 * H);
-        vm.expectRevert(bytes("challenge window closed"));
+        _rv(GroupBondBase.E.ChallengeWindowClosed);
         vm.prank(vendor);
         gb.challengePayout(id, "too late to object", "");
     }
@@ -569,37 +572,17 @@ contract GroupBondBaseTest is Test {
         _eq(v.uniqueBuyers, 2);
         _eq(v.completedVerified, 5);
         vm.warp(block.timestamp + 340 * H);
-        assertFalse(gb.vendorInfo(vendor).trusted);
+        assertLt(gb.vendorInfo(vendor).uniqueBuyers, 5);
     }
 
-    function test_only_owner_can_propose_arbiter() public {
-        vm.expectRevert(bytes("only owner"));
+    function test_arbiter_and_owner_are_fixed_at_deploy() public {
+        assertEq(gb.arbiter(), arbiter);
+        assertEq(gb.owner(), owner);
+        _disputed(4 * U);
+        vm.warp(block.timestamp + 48 * H + 1);
+        _rv(GroupBondBase.E.OnlyArbiter);
         vm.prank(stranger);
-        gb.proposeArbiter(stranger);
-    }
-
-    function test_arbiter_change_is_timelocked() public {
-        address next = makeAddr("next");
-        vm.prank(owner);
-        gb.proposeArbiter(next);
-        vm.expectRevert(bytes("change is still locked"));
-        gb.applyArbiterChange();
-        vm.warp(block.timestamp + 168 * H);
-        gb.applyArbiterChange();
-        assertEq(gb.arbiter(), next);
-    }
-
-    function test_arbiter_change_does_not_affect_open_dispute() public {
-        uint256 id = _disputed(4 * U);
-        address next = makeAddr("next");
-        vm.prank(owner);
-        gb.proposeArbiter(next);
-        vm.warp(block.timestamp + 168 * H);
-        gb.applyArbiterChange();
-        vm.expectRevert(bytes("only arbiter"));
-        vm.prank(next);
-        gb.resolveDispute(id, GroupBondBase.Verdict.SPLIT, bytes32("X"), "x", true);
-        _rule(id, GroupBondBase.Verdict.SELLER_WINS, false);
+        gb.resolveDispute(0, GroupBondBase.Verdict.SPLIT, bytes32("X"), "x", true);
     }
 
     function test_owner_collects_fees() public {
@@ -607,7 +590,7 @@ contract GroupBondBaseTest is Test {
         vm.warp(block.timestamp + 48 * H + 1);
         _rule(id, GroupBondBase.Verdict.BUYER_WINS, true);
         _eq(gb.treasury(), 200000000000000);
-        vm.expectRevert(bytes("only owner"));
+        _rv(GroupBondBase.E.OnlyOwner);
         vm.prank(stranger);
         gb.collectFees();
         vm.prank(owner);
@@ -619,9 +602,9 @@ contract GroupBondBaseTest is Test {
     }
 
     function test_bad_unit_rejected() public {
-        vm.expectRevert(bytes("bad unit"));
+        _rv(GroupBondBase.E.BadUnit);
         new GroupBondBase(arbiter, 0);
-        vm.expectRevert(bytes("arbiter required"));
+        _rv(GroupBondBase.E.ArbiterRequired);
         new GroupBondBase(address(0), H);
     }
 }

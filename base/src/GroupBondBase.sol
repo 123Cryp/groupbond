@@ -4,6 +4,8 @@ pragma solidity ^0.8.24;
 contract GroupBondBase {
     enum Status { OPEN, PAYMENT_CLAIMED, ACTIVE, DELIVERED, COMPLETED, DISPUTED, REOPENED, RESOLVED, CANCELLED, EXPIRED, PAYOUT_PENDING, CHALLENGED }
     enum Verdict { NONE, BUYER_WINS, SELLER_WINS, SPLIT, INSUFFICIENT_EVIDENCE }
+    enum E { Reentrancy, OnlyOwner, ArbiterRequired, BadUnit, NothingProposed, ChangeIsStillLocked, ZeroAddress, NotARegisteredVendor, NotAGroupAdmin, UnknownDeal, InvalidSlug, SlugTaken, AlreadyAdmin, AlreadyVendor, InvalidName, InvalidPlatform, BadUrl, PoolBelowMinimum, NoValue, AmountMustBePositive, AmountExceedsFreePool, UnknownGroup, InvalidHandle, AlreadyRegistered, AdminCannotSell, HandleTaken, BondBelowMinimum, AmountExceedsFreeBond, VendorIsNotInYourGroup, VendorCannotBeApprovedNow, VendorIsNotApproved, AlreadyRemoved, VendorHasActiveDeals, ItemLength, PriceLength, ProtectBelowMinimum, ProtectAboveLevelCap, DeliveryHours, NotEnoughFreeVendorBond, NotEnoughFreeGroupPool, OnlyVendor, DealIsNotOpen, OfferHasNotExpired, DealNotOpen, OfferExpired, VendorCannotBuyOwnDeal, AdminCannotBuyInOwnGroup, WrongDeposit, PaymentRefLength, ClaimWasRejected, NoPaymentClaimToAnswer, ReasonLength, NoPaymentClaimPending, VendorStillHasTime, DealIsNotActive, DeliveryTextLength, OnlyBuyer, DeliveryNotClaimed, ReviewWindowStillOpen, DisputeWindowStillOpen, NotDisputableNow, ClaimLength, NotInDispute, WindowClosed, OnlyParties, EvidenceLimit, TextLength, OnlyArbiter, EvidenceWindowOpen, VerdictRequired, ReasonTooLong, NoPendingPayout, ChallengeWindowClosed, PayoutIsStillLocked, ArbiterStillHasTime, PaymentEvidenceNotReviewed, PayoutExceedsLocks, NothingToClaim, TransferFailed, NoFees, DealCannotBeFinalized }
+    error Err(E code);
     enum VendorStatus { NONE, PENDING, APPROVED, SUSPENDED, REMOVED }
 
     struct Group {
@@ -36,9 +38,6 @@ contract GroupBondBase {
         string inviteUrl;
         uint256 pool;
         uint256 locked;
-        uint256 free;
-        uint8 level;
-        uint256 score;
         uint256 compensated;
         uint64 createdAt;
         uint32 vendorsTotal;
@@ -83,11 +82,8 @@ contract GroupBondBase {
         uint256 bond;
         uint256 locked;
         uint256 available;
-        uint256 maxProtect;
-        uint256 score;
-        uint8 level;
-        bool trusted;
         uint256 compensated;
+        uint64 createdAt;
         uint32 dealsBound;
         uint32 completedVerified;
         uint32 completedAuto;
@@ -170,9 +166,9 @@ contract GroupBondBase {
     uint256 public constant GROUP_BPS = 6000;
     uint256 public constant FEE_BPS = 500;
     uint256 public constant TIMEOUT_CAP_BPS = 2500;
-    uint256 public constant TRUSTED_MIN_COMPLETED = 5;
-    uint256 public constant TRUSTED_MIN_VERIFIED = 3;
-    uint256 public constant TRUSTED_MIN_UNIQUE = 5;
+    uint256 constant TRUSTED_MIN_COMPLETED = 5;
+    uint256 constant TRUSTED_MIN_VERIFIED = 3;
+    uint256 constant TRUSTED_MIN_UNIQUE = 5;
     uint256 public constant PAIR_CREDIT_LIMIT = 3;
     uint256 public constant EVIDENCE_REOPEN_BONUS = 2;
     uint256 public constant MAX_EVIDENCE_PER_SIDE = 3;
@@ -187,12 +183,9 @@ contract GroupBondBase {
     uint256 public immutable arbiterTimeout;
     uint256 public immutable payoutDelay;
     uint256 public immutable trustedMinAge;
-    uint256 public immutable arbiterChangeDelay;
 
-    address public owner;
-    address public arbiter;
-    address public pendingArbiter;
-    uint256 public arbiterChangeAt;
+    address public immutable owner;
+    address public immutable arbiter;
     uint256 public treasury;
     uint256 public burned;
     uint256 public depositsHeld;
@@ -210,7 +203,6 @@ contract GroupBondBase {
     mapping(address => uint256) public claimable;
     mapping(bytes32 => uint256) public pairCounts;
     mapping(bytes32 => bool) private rejectedClaim;
-    mapping(uint256 => address) public disputeArbiter;
 
     uint256 private lockFlag = 1;
 
@@ -227,25 +219,22 @@ contract GroupBondBase {
     event Resolved(uint256 indexed id, Verdict verdict, bytes32 reasonCode, uint256 compensation, bool paymentEvidenceReviewed);
     event Reopened(uint256 indexed id, uint64 evidenceDeadline);
     event Claimed(address indexed who, uint256 amount);
-    event ArbiterChanged(address indexed arbiter);
-    event ArbiterProposed(address indexed arbiter, uint256 effectiveAt);
-    event ArbiterProposalCancelled(address indexed arbiter);
 
     modifier nonReentrant() {
-        require(lockFlag == 1, "reentrancy");
+        if (!(lockFlag == 1)) _f(E.Reentrancy);
         lockFlag = 2;
         _;
         lockFlag = 1;
     }
 
     modifier onlyOwner() {
-        require(msg.sender == owner, "only owner");
+        if (!(msg.sender == owner)) _f(E.OnlyOwner);
         _;
     }
 
     constructor(address arbiter_, uint256 unit_) {
-        require(arbiter_ != address(0), "arbiter required");
-        require(unit_ >= 1 && unit_ <= 86400, "bad unit");
+        if (!(arbiter_ != address(0))) _f(E.ArbiterRequired);
+        if (!(unit_ >= 1 && unit_ <= 86400)) _f(E.BadUnit);
         owner = msg.sender;
         arbiter = arbiter_;
         unit = unit_;
@@ -257,36 +246,10 @@ contract GroupBondBase {
         arbiterTimeout = 168 * unit_;
         payoutDelay = 168 * unit_;
         trustedMinAge = 336 * unit_;
-        arbiterChangeDelay = 168 * unit_;
-        emit ArbiterChanged(arbiter_);
     }
 
-    function proposeArbiter(address a) external onlyOwner {
-        require(a != address(0), "arbiter required");
-        pendingArbiter = a;
-        arbiterChangeAt = block.timestamp + arbiterChangeDelay;
-        emit ArbiterProposed(a, arbiterChangeAt);
-    }
-
-    function cancelArbiterChange() external onlyOwner {
-        require(pendingArbiter != address(0), "nothing proposed");
-        emit ArbiterProposalCancelled(pendingArbiter);
-        pendingArbiter = address(0);
-        arbiterChangeAt = 0;
-    }
-
-    function applyArbiterChange() external {
-        require(pendingArbiter != address(0), "nothing proposed");
-        require(block.timestamp >= arbiterChangeAt, "change is still locked");
-        arbiter = pendingArbiter;
-        pendingArbiter = address(0);
-        arbiterChangeAt = 0;
-        emit ArbiterChanged(arbiter);
-    }
-
-    function transferOwnership(address a) external onlyOwner {
-        require(a != address(0), "zero address");
-        owner = a;
+    function _f(E e) private pure {
+        revert Err(e);
     }
 
     function _level(uint256 bond) internal pure returns (uint8) {
@@ -301,49 +264,8 @@ contract GroupBondBase {
         return MAX_PROTECT_STARTER;
     }
 
-    function _groupLevel(uint256 pool) internal pure returns (uint8) {
-        if (pool >= 0.05 ether) return 2;
-        if (pool >= 0.02 ether) return 1;
-        return 0;
-    }
-
     function _min(uint256 a, uint256 b) internal pure returns (uint256) {
         return a < b ? a : b;
-    }
-
-    function _completed(Vendor storage v) internal view returns (uint256) {
-        return uint256(v.completedVerified) + uint256(v.completedAuto);
-    }
-
-    function _trusted(Vendor storage v) internal view returns (bool) {
-        return _completed(v) >= TRUSTED_MIN_COMPLETED && v.completedVerified >= TRUSTED_MIN_VERIFIED
-            && v.uniqueBuyers >= TRUSTED_MIN_UNIQUE && block.timestamp >= uint256(v.createdAt) + trustedMinAge && v.disputesLost == 0;
-    }
-
-    function _vendorScore(Vendor storage v) internal view returns (uint256) {
-        int256 x = 500;
-        x += 12 * int256(_min(v.completedVerified, 40));
-        x += 4 * int256(_min(v.completedAuto, 40));
-        x += 15 * int256(_min(v.disputesWon, 20));
-        x -= 90 * int256(uint256(v.disputesLost));
-        x -= 40 * int256(uint256(v.disputesSplit));
-        x -= 25 * int256(uint256(v.inconclusive));
-        x -= 15 * int256(uint256(v.lapsed));
-        if (x < 0) return 0;
-        if (x > 1000) return 1000;
-        return uint256(x);
-    }
-
-    function _groupScore(Group storage g) internal view returns (uint256) {
-        int256 x = 500;
-        x += 8 * int256(_min(g.completed, 60));
-        x += 12 * int256(_min(g.disputesWon, 20));
-        x -= 80 * int256(uint256(g.disputesLost));
-        x -= 30 * int256(uint256(g.disputesSplit));
-        x -= 20 * int256(uint256(g.inconclusive));
-        if (x < 0) return 0;
-        if (x > 1000) return 1000;
-        return uint256(x);
     }
 
     function _available(Vendor storage v, Group storage g) internal view returns (uint256) {
@@ -447,17 +369,17 @@ contract GroupBondBase {
 
     function _vendor(address who) internal view returns (Vendor storage v) {
         v = vendors[who];
-        require(v.exists, "not a registered vendor");
+        if (!(v.exists)) _f(E.NotARegisteredVendor);
     }
 
     function _adminGroup(address who) internal view returns (Group storage g, bytes32 key) {
         key = groupOfAdmin[who];
-        require(key != bytes32(0), "not a group admin");
+        if (!(key != bytes32(0))) _f(E.NotAGroupAdmin);
         g = groups[key];
     }
 
     function _deal(uint256 id) internal view returns (Deal storage d) {
-        require(id < dealCount, "unknown deal");
+        if (!(id < dealCount)) _f(E.UnknownDeal);
         d = deals[id];
     }
 
@@ -469,15 +391,15 @@ contract GroupBondBase {
     }
 
     function createGroup(string calldata slug, string calldata name, uint8 platform, string calldata inviteUrl) external payable {
-        require(_validKey(slug, 3, 30, false), "invalid slug");
+        if (!(_validKey(slug, 3, 30, false))) _f(E.InvalidSlug);
         bytes32 key = keccak256(bytes(slug));
-        require(!groups[key].exists, "slug taken");
-        require(groupOfAdmin[msg.sender] == bytes32(0), "already admin");
-        require(!vendors[msg.sender].exists, "already vendor");
-        require(_len(name, 3, 60), "invalid name");
-        require(platform <= 4, "invalid platform");
-        require(_validUrl(inviteUrl), "bad url");
-        require(msg.value >= MIN_POOL, "pool below minimum");
+        if (!(!groups[key].exists)) _f(E.SlugTaken);
+        if (!(groupOfAdmin[msg.sender] == bytes32(0))) _f(E.AlreadyAdmin);
+        if (!(!vendors[msg.sender].exists)) _f(E.AlreadyVendor);
+        if (!(_len(name, 3, 60))) _f(E.InvalidName);
+        if (!(platform <= 4)) _f(E.InvalidPlatform);
+        if (!(_validUrl(inviteUrl))) _f(E.BadUrl);
+        if (!(msg.value >= MIN_POOL)) _f(E.PoolBelowMinimum);
         Group storage g = groups[key];
         g.slug = slug;
         g.admin = msg.sender;
@@ -494,15 +416,15 @@ contract GroupBondBase {
 
     function addPool() external payable {
         (Group storage g, bytes32 key) = _adminGroup(msg.sender);
-        require(msg.value > 0, "no value");
+        if (!(msg.value > 0)) _f(E.NoValue);
         g.pool += msg.value;
         emit PoolChanged(key, g.pool);
     }
 
     function withdrawPool(uint256 amount) external {
         (Group storage g, bytes32 key) = _adminGroup(msg.sender);
-        require(amount > 0, "amount must be positive");
-        require(amount <= g.pool - g.locked, "amount exceeds free pool");
+        if (!(amount > 0)) _f(E.AmountMustBePositive);
+        if (!(amount <= g.pool - g.locked)) _f(E.AmountExceedsFreePool);
         g.pool -= amount;
         _credit(msg.sender, amount);
         emit PoolChanged(key, g.pool);
@@ -511,13 +433,13 @@ contract GroupBondBase {
     function joinGroup(string calldata slug, string calldata handle) external payable {
         bytes32 key = keccak256(bytes(slug));
         Group storage g = groups[key];
-        require(g.exists, "unknown group");
-        require(_validKey(handle, 3, 30, true), "invalid handle");
-        require(!vendors[msg.sender].exists, "already registered");
-        require(groupOfAdmin[msg.sender] == bytes32(0), "admin cannot sell");
+        if (!(g.exists)) _f(E.UnknownGroup);
+        if (!(_validKey(handle, 3, 30, true))) _f(E.InvalidHandle);
+        if (!(!vendors[msg.sender].exists)) _f(E.AlreadyRegistered);
+        if (!(groupOfAdmin[msg.sender] == bytes32(0))) _f(E.AdminCannotSell);
         bytes32 hk = keccak256(bytes(handle));
-        require(handleOwners[hk] == address(0), "handle taken");
-        require(msg.value >= MIN_BOND, "bond below minimum");
+        if (!(handleOwners[hk] == address(0))) _f(E.HandleTaken);
+        if (!(msg.value >= MIN_BOND)) _f(E.BondBelowMinimum);
         Vendor storage v = vendors[msg.sender];
         v.groupKey = key;
         v.handle = handle;
@@ -533,15 +455,15 @@ contract GroupBondBase {
 
     function addBond() external payable {
         Vendor storage v = _vendor(msg.sender);
-        require(msg.value > 0, "no value");
+        if (!(msg.value > 0)) _f(E.NoValue);
         v.bond += msg.value;
         emit BondChanged(msg.sender, v.bond);
     }
 
     function withdrawBond(uint256 amount) external {
         Vendor storage v = _vendor(msg.sender);
-        require(amount > 0, "amount must be positive");
-        require(amount <= v.bond - v.locked, "amount exceeds free bond");
+        if (!(amount > 0)) _f(E.AmountMustBePositive);
+        if (!(amount <= v.bond - v.locked)) _f(E.AmountExceedsFreeBond);
         v.bond -= amount;
         _credit(msg.sender, amount);
         emit BondChanged(msg.sender, v.bond);
@@ -550,8 +472,8 @@ contract GroupBondBase {
     function approveVendor(address who) external {
         (Group storage g, bytes32 key) = _adminGroup(msg.sender);
         Vendor storage v = _vendor(who);
-        require(v.groupKey == key, "vendor is not in your group");
-        require(v.status == VendorStatus.PENDING || v.status == VendorStatus.SUSPENDED, "vendor cannot be approved now");
+        if (!(v.groupKey == key)) _f(E.VendorIsNotInYourGroup);
+        if (!(v.status == VendorStatus.PENDING || v.status == VendorStatus.SUSPENDED)) _f(E.VendorCannotBeApprovedNow);
         v.status = VendorStatus.APPROVED;
         if (v.approvedAt == 0) v.approvedAt = uint64(block.timestamp);
         g.vendorsApproved += 1;
@@ -561,8 +483,8 @@ contract GroupBondBase {
     function suspendVendor(address who) external {
         (Group storage g, bytes32 key) = _adminGroup(msg.sender);
         Vendor storage v = _vendor(who);
-        require(v.groupKey == key, "vendor is not in your group");
-        require(v.status == VendorStatus.APPROVED, "vendor is not approved");
+        if (!(v.groupKey == key)) _f(E.VendorIsNotInYourGroup);
+        if (!(v.status == VendorStatus.APPROVED)) _f(E.VendorIsNotApproved);
         v.status = VendorStatus.SUSPENDED;
         g.vendorsApproved -= 1;
         emit VendorStatusChanged(who, v.status);
@@ -571,7 +493,7 @@ contract GroupBondBase {
     function removeVendor(address who) external {
         (Group storage g, bytes32 key) = _adminGroup(msg.sender);
         Vendor storage v = _vendor(who);
-        require(v.groupKey == key, "vendor is not in your group");
+        if (!(v.groupKey == key)) _f(E.VendorIsNotInYourGroup);
         _remove(v, g, who);
     }
 
@@ -581,8 +503,8 @@ contract GroupBondBase {
     }
 
     function _remove(Vendor storage v, Group storage g, address who) internal {
-        require(v.status != VendorStatus.REMOVED, "already removed");
-        require(v.activeDeals == 0, "vendor has active deals");
+        if (!(v.status != VendorStatus.REMOVED)) _f(E.AlreadyRemoved);
+        if (!(v.activeDeals == 0)) _f(E.VendorHasActiveDeals);
         if (v.status == VendorStatus.APPROVED) g.vendorsApproved -= 1;
         v.status = VendorStatus.REMOVED;
         emit VendorStatusChanged(who, v.status);
@@ -596,18 +518,18 @@ contract GroupBondBase {
         uint256 deliveryHours
     ) external returns (uint256 id) {
         Vendor storage v = _vendor(msg.sender);
-        require(v.status == VendorStatus.APPROVED, "vendor is not approved");
+        if (!(v.status == VendorStatus.APPROVED)) _f(E.VendorIsNotApproved);
         Group storage g = groups[v.groupKey];
-        require(_len(item, 3, 200), "item length");
-        require(_len(priceText, 1, 80), "price length");
-        require(_validUrl(listingUrl), "bad url");
-        require(protect >= MIN_PROTECT, "protect below minimum");
-        require(protect <= _maxProtect(_level(v.bond)), "protect above level cap");
-        require(deliveryHours >= 1 && deliveryHours <= MAX_DELIVERY_HOURS, "delivery hours");
+        if (!(_len(item, 3, 200))) _f(E.ItemLength);
+        if (!(_len(priceText, 1, 80))) _f(E.PriceLength);
+        if (!(_validUrl(listingUrl))) _f(E.BadUrl);
+        if (!(protect >= MIN_PROTECT)) _f(E.ProtectBelowMinimum);
+        if (!(protect <= _maxProtect(_level(v.bond)))) _f(E.ProtectAboveLevelCap);
+        if (!(deliveryHours >= 1 && deliveryHours <= MAX_DELIVERY_HOURS)) _f(E.DeliveryHours);
         uint256 vlock = (protect * VENDOR_BPS) / 10000;
         uint256 glock = (protect * GROUP_BPS) / 10000;
-        require(vlock <= v.bond - v.locked, "not enough free vendor bond");
-        require(glock <= g.pool - g.locked, "not enough free group pool");
+        if (!(vlock <= v.bond - v.locked)) _f(E.NotEnoughFreeVendorBond);
+        if (!(glock <= g.pool - g.locked)) _f(E.NotEnoughFreeGroupPool);
         id = dealCount++;
         Deal storage d = deals[id];
         d.id = id;
@@ -633,8 +555,8 @@ contract GroupBondBase {
 
     function cancelDeal(uint256 id) external {
         Deal storage d = _deal(id);
-        require(msg.sender == d.seller, "only vendor");
-        require(d.status == Status.OPEN, "deal is not open");
+        if (!(msg.sender == d.seller)) _f(E.OnlyVendor);
+        if (!(d.status == Status.OPEN)) _f(E.DealIsNotOpen);
         _release(d, vendors[d.seller], groups[d.groupKey]);
         d.status = Status.CANCELLED;
         d.resolvedAt = uint64(block.timestamp);
@@ -643,8 +565,8 @@ contract GroupBondBase {
 
     function expireOffer(uint256 id) external {
         Deal storage d = _deal(id);
-        require(d.status == Status.OPEN, "deal is not open");
-        require(block.timestamp > d.offerExpires, "offer has not expired");
+        if (!(d.status == Status.OPEN)) _f(E.DealIsNotOpen);
+        if (!(block.timestamp > d.offerExpires)) _f(E.OfferHasNotExpired);
         _release(d, vendors[d.seller], groups[d.groupKey]);
         d.status = Status.EXPIRED;
         d.resolvedAt = uint64(block.timestamp);
@@ -653,13 +575,13 @@ contract GroupBondBase {
 
     function claimPayment(uint256 id, string calldata paymentRef) external payable {
         Deal storage d = _deal(id);
-        require(d.status == Status.OPEN, "deal not open");
-        require(block.timestamp <= d.offerExpires, "offer expired");
-        require(msg.sender != d.seller, "vendor cannot buy own deal");
-        require(msg.sender != groups[d.groupKey].admin, "admin cannot buy in own group");
-        require(msg.value == CLAIM_DEPOSIT, "wrong deposit");
-        require(_len(paymentRef, 5, 300), "payment ref length");
-        require(!rejectedClaim[keccak256(abi.encodePacked(id, msg.sender))], "claim was rejected");
+        if (!(d.status == Status.OPEN)) _f(E.DealNotOpen);
+        if (!(block.timestamp <= d.offerExpires)) _f(E.OfferExpired);
+        if (!(msg.sender != d.seller)) _f(E.VendorCannotBuyOwnDeal);
+        if (!(msg.sender != groups[d.groupKey].admin)) _f(E.AdminCannotBuyInOwnGroup);
+        if (!(msg.value == CLAIM_DEPOSIT)) _f(E.WrongDeposit);
+        if (!(_len(paymentRef, 5, 300))) _f(E.PaymentRefLength);
+        if (!(!rejectedClaim[keccak256(abi.encodePacked(id, msg.sender))])) _f(E.ClaimWasRejected);
         d.buyer = msg.sender;
         d.paymentRef = paymentRef;
         d.claimedAt = uint64(block.timestamp);
@@ -681,13 +603,13 @@ contract GroupBondBase {
 
     function respondPayment(uint256 id, bool accept, string calldata reason) external {
         Deal storage d = _deal(id);
-        require(msg.sender == d.seller, "only vendor");
-        require(d.status == Status.PAYMENT_CLAIMED, "no payment claim to answer");
+        if (!(msg.sender == d.seller)) _f(E.OnlyVendor);
+        if (!(d.status == Status.PAYMENT_CLAIMED)) _f(E.NoPaymentClaimToAnswer);
         if (accept) {
             _bind(d, 1);
             return;
         }
-        require(_len(reason, 5, 200), "reason length");
+        if (!(_len(reason, 5, 200))) _f(E.ReasonLength);
         vendors[d.seller].rejectedClaims += 1;
         rejectedClaim[keccak256(abi.encodePacked(id, d.buyer))] = true;
         uint256 dep = d.claimDeposit;
@@ -706,17 +628,17 @@ contract GroupBondBase {
 
     function bindByTimeout(uint256 id) external {
         Deal storage d = _deal(id);
-        require(d.status == Status.PAYMENT_CLAIMED, "no payment claim pending");
-        require(block.timestamp >= uint256(d.claimedAt) + confirmWindow, "vendor still has time");
+        if (!(d.status == Status.PAYMENT_CLAIMED)) _f(E.NoPaymentClaimPending);
+        if (!(block.timestamp >= uint256(d.claimedAt) + confirmWindow)) _f(E.VendorStillHasTime);
         _bind(d, 2);
     }
 
     function submitDelivery(uint256 id, string calldata text, string calldata url) external {
         Deal storage d = _deal(id);
-        require(msg.sender == d.seller, "only vendor");
-        require(d.status == Status.ACTIVE, "deal is not active");
-        require(_len(text, 3, 1500), "delivery text length");
-        require(_validUrl(url), "bad url");
+        if (!(msg.sender == d.seller)) _f(E.OnlyVendor);
+        if (!(d.status == Status.ACTIVE)) _f(E.DealIsNotActive);
+        if (!(_len(text, 3, 1500))) _f(E.DeliveryTextLength);
+        if (!(_validUrl(url))) _f(E.BadUrl);
         d.deliveryText = text;
         d.deliveryUrl = url;
         d.deliveredAt = uint64(block.timestamp);
@@ -749,8 +671,8 @@ contract GroupBondBase {
 
     function confirmDelivery(uint256 id) external {
         Deal storage d = _deal(id);
-        require(msg.sender == d.buyer, "only buyer");
-        require(d.status == Status.DELIVERED, "delivery not claimed");
+        if (!(msg.sender == d.buyer)) _f(E.OnlyBuyer);
+        if (!(d.status == Status.DELIVERED)) _f(E.DeliveryNotClaimed);
         Vendor storage v = vendors[d.seller];
         Group storage g = groups[d.groupKey];
         _release(d, v, g);
@@ -768,20 +690,20 @@ contract GroupBondBase {
         Vendor storage v = vendors[d.seller];
         Group storage g = groups[d.groupKey];
         if (d.status == Status.DELIVERED) {
-            require(block.timestamp > uint256(d.deliveredAt) + reviewWindow, "review window still open");
+            if (!(block.timestamp > uint256(d.deliveredAt) + reviewWindow)) _f(E.ReviewWindowStillOpen);
             _release(d, v, g);
             _creditCompletion(d, v, false);
             g.completed += 1;
             _returnClaimDeposit(d, false);
             d.status = Status.COMPLETED;
         } else if (d.status == Status.ACTIVE) {
-            require(block.timestamp > uint256(d.deliveryDeadline) + reviewWindow, "dispute window still open");
+            if (!(block.timestamp > uint256(d.deliveryDeadline) + reviewWindow)) _f(E.DisputeWindowStillOpen);
             _release(d, v, g);
             v.lapsed += 1;
             _returnClaimDeposit(d, false);
             d.status = Status.EXPIRED;
         } else {
-            revert("deal cannot be finalized");
+            _f(E.DealCannotBeFinalized);
         }
         d.resolvedAt = uint64(block.timestamp);
         emit DealStatus(id, d.status);
@@ -797,17 +719,16 @@ contract GroupBondBase {
 
     function openDispute(uint256 id, string calldata claimText, string calldata url) external payable {
         Deal storage d = _deal(id);
-        require(msg.sender == d.buyer, "only buyer");
-        require(msg.value == DISPUTE_DEPOSIT, "wrong deposit");
+        if (!(msg.sender == d.buyer)) _f(E.OnlyBuyer);
+        if (!(msg.value == DISPUTE_DEPOSIT)) _f(E.WrongDeposit);
         bool late = d.status == Status.ACTIVE && block.timestamp > d.deliveryDeadline
             && block.timestamp <= uint256(d.deliveryDeadline) + reviewWindow;
         bool mismatch = d.status == Status.DELIVERED && block.timestamp <= uint256(d.deliveredAt) + reviewWindow;
-        require(late || mismatch, "not disputable now");
-        require(_len(claimText, 10, 1500), "claim length");
-        require(_validUrl(url), "bad url");
+        if (!(late || mismatch)) _f(E.NotDisputableNow);
+        if (!(_len(claimText, 10, 1500))) _f(E.ClaimLength);
+        if (!(_validUrl(url))) _f(E.BadUrl);
         d.deposit = msg.value;
         depositsHeld += msg.value;
-        disputeArbiter[id] = arbiter;
         d.evidenceDeadline = uint64(block.timestamp + evidenceWindow);
         d.disputeOpenedAt = uint64(block.timestamp);
         d.status = Status.DISPUTED;
@@ -817,14 +738,14 @@ contract GroupBondBase {
 
     function submitEvidence(uint256 id, string calldata text, string calldata url) external {
         Deal storage d = _deal(id);
-        require(_inDispute(d), "not in dispute");
-        require(block.timestamp <= d.evidenceDeadline, "window closed");
+        if (!(_inDispute(d))) _f(E.NotInDispute);
+        if (!(block.timestamp <= d.evidenceDeadline)) _f(E.WindowClosed);
         bool byBuyer = msg.sender == d.buyer;
-        require(byBuyer || msg.sender == d.seller, "only parties");
+        if (!(byBuyer || msg.sender == d.seller)) _f(E.OnlyParties);
         uint256 limit = MAX_EVIDENCE_PER_SIDE + (d.reopened ? EVIDENCE_REOPEN_BONUS : 0) + (d.challenged ? EVIDENCE_REOPEN_BONUS : 0);
-        require((byBuyer ? d.evBuyer : d.evSeller) < limit, "evidence limit");
-        require(_len(text, 5, 1500), "text length");
-        require(_validUrl(url), "bad url");
+        if (!((byBuyer ? d.evBuyer : d.evSeller) < limit)) _f(E.EvidenceLimit);
+        if (!(_len(text, 5, 1500))) _f(E.TextLength);
+        if (!(_validUrl(url))) _f(E.BadUrl);
         _addEvidence(d, byBuyer, text, url);
     }
 
@@ -836,11 +757,11 @@ contract GroupBondBase {
         bool paymentEvidenceReviewed
     ) external {
         Deal storage d = _deal(id);
-        require(msg.sender == disputeArbiter[id], "only arbiter");
-        require(_inDispute(d), "not in dispute");
-        require(block.timestamp > d.evidenceDeadline, "evidence window open");
-        require(verdict != Verdict.NONE, "verdict required");
-        require(bytes(reason).length <= 300, "reason too long");
+        if (!(msg.sender == arbiter)) _f(E.OnlyArbiter);
+        if (!(_inDispute(d))) _f(E.NotInDispute);
+        if (!(block.timestamp > d.evidenceDeadline)) _f(E.EvidenceWindowOpen);
+        if (!(verdict != Verdict.NONE)) _f(E.VerdictRequired);
+        if (!(bytes(reason).length <= 300)) _f(E.ReasonTooLong);
         bool silent = d.boundBy != 1;
         if (silent && (verdict == Verdict.BUYER_WINS || verdict == Verdict.SPLIT) && !paymentEvidenceReviewed) {
             verdict = Verdict.INSUFFICIENT_EVIDENCE;
@@ -876,11 +797,11 @@ contract GroupBondBase {
 
     function challengePayout(uint256 id, string calldata text, string calldata url) external {
         Deal storage d = _deal(id);
-        require(msg.sender == d.seller, "only vendor");
-        require(d.status == Status.PAYOUT_PENDING, "no pending payout");
-        require(block.timestamp < d.unlockAt, "challenge window closed");
-        require(_len(text, 5, 1500), "text length");
-        require(_validUrl(url), "bad url");
+        if (!(msg.sender == d.seller)) _f(E.OnlyVendor);
+        if (!(d.status == Status.PAYOUT_PENDING)) _f(E.NoPendingPayout);
+        if (!(block.timestamp < d.unlockAt)) _f(E.ChallengeWindowClosed);
+        if (!(_len(text, 5, 1500))) _f(E.TextLength);
+        if (!(_validUrl(url))) _f(E.BadUrl);
         d.reopened = true;
         _addEvidence(d, false, text, url);
         d.challenged = true;
@@ -893,15 +814,15 @@ contract GroupBondBase {
 
     function finalizePayout(uint256 id) external {
         Deal storage d = _deal(id);
-        require(d.status == Status.PAYOUT_PENDING, "no pending payout");
-        require(block.timestamp >= d.unlockAt, "payout is still locked");
+        if (!(d.status == Status.PAYOUT_PENDING)) _f(E.NoPendingPayout);
+        if (!(block.timestamp >= d.unlockAt)) _f(E.PayoutIsStillLocked);
         _settle(d, d.verdict, d.reasonCode, d.reason, d.paymentEvidenceReviewed);
     }
 
     function closeStalledDispute(uint256 id) external {
         Deal storage d = _deal(id);
-        require(_inDispute(d), "not in dispute");
-        require(block.timestamp > uint256(d.evidenceDeadline) + arbiterTimeout, "arbiter still has time");
+        if (!(_inDispute(d))) _f(E.NotInDispute);
+        if (!(block.timestamp > uint256(d.evidenceDeadline) + arbiterTimeout)) _f(E.ArbiterStillHasTime);
         _settle(d, Verdict.INSUFFICIENT_EVIDENCE, bytes32("ARBITER_TIMEOUT"), "Arbiter did not rule in time", false);
     }
 
@@ -909,7 +830,7 @@ contract GroupBondBase {
         if (verdict == Verdict.BUYER_WINS) comp = d.protect;
         else if (verdict == Verdict.SPLIT) comp = d.protect / 2;
         if (comp > 0 && d.boundBy != 1) {
-            require(reviewed, "payment evidence not reviewed");
+            if (!(reviewed)) _f(E.PaymentEvidenceNotReviewed);
             comp = _min(comp, (d.protect * TIMEOUT_CAP_BPS) / 10000);
         }
     }
@@ -922,7 +843,7 @@ contract GroupBondBase {
         uint256 total = comp + fee;
         uint256 vpay = _min(total, d.vendorLock);
         uint256 gpay = total - vpay;
-        require(gpay <= d.groupLock, "payout exceeds locks");
+        if (!(gpay <= d.groupLock)) _f(E.PayoutExceedsLocks);
         v.bond -= vpay;
         g.pool -= gpay;
         _release(d, v, g);
@@ -974,17 +895,17 @@ contract GroupBondBase {
 
     function claim() external nonReentrant {
         uint256 amt = claimable[msg.sender];
-        require(amt > 0, "nothing to claim");
+        if (!(amt > 0)) _f(E.NothingToClaim);
         claimable[msg.sender] = 0;
         totalClaimable -= amt;
         (bool ok, ) = msg.sender.call{value: amt}("");
-        require(ok, "transfer failed");
+        if (!(ok)) _f(E.TransferFailed);
         emit Claimed(msg.sender, amt);
     }
 
     function collectFees() external onlyOwner {
         uint256 amt = treasury;
-        require(amt > 0, "no fees");
+        if (!(amt > 0)) _f(E.NoFees);
         treasury = 0;
         _credit(owner, amt);
     }
@@ -1007,7 +928,7 @@ contract GroupBondBase {
 
     function _groupInfo(bytes32 key) internal view returns (GroupInfo memory i) {
         Group storage g = groups[key];
-        require(g.exists, "unknown group");
+        if (!(g.exists)) _f(E.UnknownGroup);
         i.slug = g.slug;
         i.admin = g.admin;
         i.name = g.name;
@@ -1015,9 +936,6 @@ contract GroupBondBase {
         i.inviteUrl = g.inviteUrl;
         i.pool = g.pool;
         i.locked = g.locked;
-        i.free = g.pool - g.locked;
-        i.level = _groupLevel(g.pool);
-        i.score = _groupScore(g);
         i.compensated = g.compensated;
         i.createdAt = g.createdAt;
         i.vendorsTotal = g.vendorsTotal;
@@ -1055,10 +973,7 @@ contract GroupBondBase {
         i.bond = v.bond;
         i.locked = v.locked;
         i.available = v.status == VendorStatus.APPROVED ? _available(v, g) : 0;
-        i.maxProtect = _maxProtect(_level(v.bond));
-        i.score = _vendorScore(v);
-        i.level = _level(v.bond);
-        i.trusted = _trusted(v);
+        i.createdAt = v.createdAt;
         i.compensated = v.compensated;
         i.dealsBound = v.dealsBound;
         i.completedVerified = v.completedVerified;

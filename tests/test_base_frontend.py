@@ -19,10 +19,23 @@ class TestBaseFrontend(unittest.TestCase):
         self.assertIsNotNone(m)
         self.assertEqual(json.loads(m.group(1)), json.loads(fresh))
 
+    def test_embedded_error_names_match_solidity(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("gen_abi", ROOT / "scripts" / "gen_abi.py")
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        m = re.search(r"/\*ERR_START\*/(.*?)/\*ERR_END\*/", self.html, re.S)
+        self.assertIsNotNone(m)
+        self.assertEqual(json.loads(m.group(1)), json.loads(mod.render_errors()))
+        for key in ("wrong_deposit", "claim_was_rejected", "pool_below_minimum", "vendor_cannot_buy_own_deal"):
+            self.assertIn(key, json.loads(m.group(1)))
+
     def test_every_abi_function_exists_in_source(self):
         abi = json.loads(re.search(r"/\*ABI_START\*/(.*?)/\*ABI_END\*/", self.html, re.S).group(1))
         for item in abi:
             n = item["name"]
+            if item["type"] == "error":
+                continue
             self.assertTrue(re.search(r"function\s+%s\s*\(" % n, self.sol) or re.search(r"\bpublic\s+(?:constant\s+|immutable\s+)?%s\b" % n, self.sol), n)
 
     def test_every_write_call_targets_a_payable_or_nonpayable_function(self):
