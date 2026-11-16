@@ -94,7 +94,7 @@ contract GroupBondBaseTest is Test {
     }
 
     function _rv(GroupBondBase.E e) internal {
-        vm.expectRevert(abi.encodeWithSelector(GroupBondBase.Err.selector, e));
+        vm.expectRevert(abi.encodeWithSelector(GroupBondStore.Err.selector, e));
     }
 
     function _eq(uint256 a, uint256 b) internal pure {
