@@ -6,6 +6,7 @@ import "../src/GroupBondBase.sol";
 
 contract GroupBondBaseTest is Test {
     GroupBondBase gb;
+    IGroupBondViews vw;
     address owner = makeAddr("owner");
     address arbiter = makeAddr("arbiter");
     address admin = makeAddr("admin");
@@ -19,6 +20,7 @@ contract GroupBondBaseTest is Test {
     function setUp() public {
         vm.prank(owner);
         gb = new GroupBondBase(arbiter, H);
+        vw = IGroupBondViews(address(gb));
         address[5] memory who = [admin, vendor, buyer, other, stranger];
         for (uint256 i = 0; i < who.length; i++) vm.deal(who[i], 10 ether);
     }
@@ -100,14 +102,14 @@ contract GroupBondBaseTest is Test {
     }
 
     function _accounting() internal view {
-        uint256 total = gb.totalBonds() + gb.totalPools() + gb.totalClaimable() + gb.treasury() + gb.burned() + gb.depositsHeld();
+        uint256 total = vw.totalBonds() + vw.totalPools() + gb.totalClaimable() + gb.treasury() + gb.burned() + gb.depositsHeld();
         _eq(address(gb).balance, total);
     }
 
     function _locks(uint256 id) internal view {
-        GroupBondBase.Deal memory d = gb.getDeal(id);
-        GroupBondBase.GroupInfo memory g = gb.groupInfo("deal_hub");
-        GroupBondBase.VendorInfo memory v = gb.vendorInfo(vendor);
+        GroupBondBase.Deal memory d = vw.getDeal(id);
+        GroupBondBase.GroupInfo memory g = vw.groupInfo("deal_hub");
+        GroupBondBase.VendorInfo memory v = vw.vendorInfo(vendor);
         bool live = d.status != GroupBondBase.Status.COMPLETED && d.status != GroupBondBase.Status.RESOLVED
             && d.status != GroupBondBase.Status.CANCELLED && d.status != GroupBondBase.Status.EXPIRED;
         _eq(g.locked, live ? d.groupLock : 0);
@@ -128,7 +130,7 @@ contract GroupBondBaseTest is Test {
         vm.prank(admin);
         gb.createGroup{value: 20 * U}("deal_hub", "Deal Hub", 0, "http://t.me/x");
         _group(20 * U);
-        GroupBondBase.GroupInfo memory g = gb.groupInfo("deal_hub");
+        GroupBondBase.GroupInfo memory g = vw.groupInfo("deal_hub");
         assertEq(g.admin, admin);
         _eq(g.pool, 20 * U);
         _rv(GroupBondBase.E.SlugTaken);
@@ -159,7 +161,7 @@ contract GroupBondBaseTest is Test {
         _group(20 * U);
         vm.prank(vendor);
         gb.joinGroup{value: 10 * U}("deal_hub", "shop_one");
-        _eq(uint8(gb.vendorInfo(vendor).status), uint8(GroupBondBase.VendorStatus.PENDING));
+        _eq(uint8(vw.vendorInfo(vendor).status), uint8(GroupBondBase.VendorStatus.PENDING));
         _rv(GroupBondBase.E.VendorIsNotApproved);
         vm.prank(vendor);
         gb.createDeal("Red handbag", "40 USD", "", 2 * U, 48);
@@ -168,10 +170,10 @@ contract GroupBondBaseTest is Test {
         gb.approveVendor(vendor);
         vm.prank(admin);
         gb.approveVendor(vendor);
-        _eq(gb.groupInfo("deal_hub").vendorsApproved, 1);
-        _eq(gb.getProtection(vendor), 15 * U);
-        assertTrue(gb.isProtected(vendor, 15 * U));
-        assertFalse(gb.isProtected(vendor, 16 * U));
+        _eq(vw.groupInfo("deal_hub").vendorsApproved, 1);
+        _eq(vw.getProtection(vendor), 15 * U);
+        assertTrue(vw.isProtected(vendor, 15 * U));
+        assertFalse(vw.isProtected(vendor, 16 * U));
         _accounting();
     }
 
@@ -189,11 +191,11 @@ contract GroupBondBaseTest is Test {
     function test_create_locks_both_sides() public {
         _market();
         uint256 id = _deal(4 * U);
-        GroupBondBase.Deal memory d = gb.getDeal(id);
+        GroupBondBase.Deal memory d = vw.getDeal(id);
         _eq(d.vendorLock, 2 * U);
         _eq(d.groupLock, 2400000000000000);
-        _eq(gb.vendorInfo(vendor).locked, 2 * U);
-        _eq(gb.groupInfo("deal_hub").locked, 2400000000000000);
+        _eq(vw.vendorInfo(vendor).locked, 2 * U);
+        _eq(vw.groupInfo("deal_hub").locked, 2400000000000000);
         _rv(GroupBondBase.E.ProtectAboveLevelCap);
         vm.prank(vendor);
         gb.createDeal("Big handbag", "40 USD", "", 16 * U, 48);
@@ -222,17 +224,17 @@ contract GroupBondBaseTest is Test {
         vm.warp(block.timestamp + 72 * H + 1);
         gb.expireOffer(b);
         _locks(b);
-        _eq(gb.groupInfo("deal_hub").activeDeals, 0);
+        _eq(vw.groupInfo("deal_hub").activeDeals, 0);
     }
 
     function test_happy_path() public {
         uint256 id = _delivered(4 * U);
         vm.prank(buyer);
         gb.confirmDelivery(id);
-        _eq(uint8(gb.getDeal(id).status), uint8(GroupBondBase.Status.COMPLETED));
+        _eq(uint8(vw.getDeal(id).status), uint8(GroupBondBase.Status.COMPLETED));
         _eq(gb.claimable(buyer), U);
-        _eq(gb.vendorInfo(vendor).completedVerified, 1);
-        _eq(gb.groupInfo("deal_hub").completed, 1);
+        _eq(vw.vendorInfo(vendor).completedVerified, 1);
+        _eq(vw.groupInfo("deal_hub").completed, 1);
         _locks(id);
         _accounting();
     }
@@ -250,7 +252,7 @@ contract GroupBondBaseTest is Test {
         vm.prank(buyer);
         gb.claimPayment{value: U}(id, "bank ref 654321");
         _claim(id, other);
-        _eq(gb.vendorInfo(vendor).rejectedClaims, 1);
+        _eq(vw.vendorInfo(vendor).rejectedClaims, 1);
         _accounting();
     }
 
@@ -279,7 +281,7 @@ contract GroupBondBaseTest is Test {
         gb.bindByTimeout(id);
         vm.warp(block.timestamp + 24 * H);
         gb.bindByTimeout(id);
-        _eq(gb.getDeal(id).boundBy, 2);
+        _eq(vw.getDeal(id).boundBy, 2);
     }
 
     function test_auto_finalize_and_lapse() public {
@@ -288,7 +290,7 @@ contract GroupBondBaseTest is Test {
         gb.finalizeDeal(id);
         vm.warp(block.timestamp + 72 * H + 1);
         gb.finalizeDeal(id);
-        _eq(gb.vendorInfo(vendor).completedAuto, 1);
+        _eq(vw.vendorInfo(vendor).completedAuto, 1);
         _eq(gb.claimable(buyer), U);
         _accounting();
         vm.prank(vendor);
@@ -298,8 +300,8 @@ contract GroupBondBaseTest is Test {
         gb.respondPayment(id2, true, "");
         vm.warp(block.timestamp + 24 * H + 72 * H + 1);
         gb.finalizeDeal(id2);
-        _eq(gb.vendorInfo(vendor).lapsed, 1);
-        _eq(uint8(gb.getDeal(id2).status), uint8(GroupBondBase.Status.EXPIRED));
+        _eq(vw.vendorInfo(vendor).lapsed, 1);
+        _eq(uint8(vw.getDeal(id2).status), uint8(GroupBondBase.Status.EXPIRED));
         _accounting();
     }
 
@@ -307,13 +309,13 @@ contract GroupBondBaseTest is Test {
         uint256 id = _disputed(4 * U);
         vm.warp(block.timestamp + 48 * H + 1);
         _rule(id, GroupBondBase.Verdict.BUYER_WINS, true);
-        GroupBondBase.Deal memory d = gb.getDeal(id);
+        GroupBondBase.Deal memory d = vw.getDeal(id);
         _eq(d.compensation, 4 * U);
         _eq(d.fee, 200000000000000);
         _eq(d.paidVendor, 2 * U);
         _eq(d.paidGroup, 2200000000000000);
-        _eq(gb.vendorInfo(vendor).bond, 8 * U);
-        _eq(gb.groupInfo("deal_hub").pool, 20 * U - 2200000000000000);
+        _eq(vw.vendorInfo(vendor).bond, 8 * U);
+        _eq(vw.groupInfo("deal_hub").pool, 20 * U - 2200000000000000);
         _eq(gb.claimable(buyer), 6 * U);
         _locks(id);
         _accounting();
@@ -323,10 +325,10 @@ contract GroupBondBaseTest is Test {
         uint256 id = _disputed(4 * U);
         vm.warp(block.timestamp + 48 * H + 1);
         _rule(id, GroupBondBase.Verdict.BUYER_WINS, true);
-        _eq(uint8(gb.vendorInfo(vendor).status), uint8(GroupBondBase.VendorStatus.SUSPENDED));
-        _eq(gb.groupInfo("deal_hub").vendorsApproved, 0);
-        _eq(gb.groupInfo("deal_hub").disputesLost, 1);
-        _eq(gb.getProtection(vendor), 0);
+        _eq(uint8(vw.vendorInfo(vendor).status), uint8(GroupBondBase.VendorStatus.SUSPENDED));
+        _eq(vw.groupInfo("deal_hub").vendorsApproved, 0);
+        _eq(vw.groupInfo("deal_hub").disputesLost, 1);
+        _eq(vw.getProtection(vendor), 0);
         _rv(GroupBondBase.E.VendorIsNotApproved);
         vm.prank(vendor);
         gb.createDeal("Blue handbag", "40 USD", "", 2 * U, 24);
@@ -338,8 +340,8 @@ contract GroupBondBaseTest is Test {
         _rule(id, GroupBondBase.Verdict.SELLER_WINS, false);
         _eq(gb.claimable(vendor), 2 * U);
         _eq(gb.claimable(buyer), 0);
-        _eq(gb.getDeal(id).compensation, 0);
-        _eq(gb.vendorInfo(vendor).disputesWon, 1);
+        _eq(vw.getDeal(id).compensation, 0);
+        _eq(vw.vendorInfo(vendor).disputesWon, 1);
         _accounting();
     }
 
@@ -347,7 +349,7 @@ contract GroupBondBaseTest is Test {
         uint256 id = _disputed(4 * U);
         vm.warp(block.timestamp + 48 * H + 1);
         _rule(id, GroupBondBase.Verdict.SPLIT, true);
-        GroupBondBase.Deal memory d = gb.getDeal(id);
+        GroupBondBase.Deal memory d = vw.getDeal(id);
         _eq(d.compensation, 2 * U);
         _eq(d.paidGroup, 100000000000000);
         _accounting();
@@ -367,7 +369,7 @@ contract GroupBondBaseTest is Test {
         gb.openDispute{value: U}(id, "parcel never arrived at all", "");
         vm.warp(block.timestamp + 48 * H + 1);
         _rule(id, GroupBondBase.Verdict.BUYER_WINS, true);
-        GroupBondBase.Deal memory d = gb.getDeal(id);
+        GroupBondBase.Deal memory d = vw.getDeal(id);
         _eq(d.paidVendor, 5 * U);
         _eq(d.paidGroup, 5500000000000000);
         assertLe(d.paidGroup, d.groupLock);
@@ -378,11 +380,11 @@ contract GroupBondBaseTest is Test {
         uint256 id = _disputed(4 * U);
         vm.warp(block.timestamp + 48 * H + 1);
         _rule(id, GroupBondBase.Verdict.INSUFFICIENT_EVIDENCE, false);
-        _eq(uint8(gb.getDeal(id).status), uint8(GroupBondBase.Status.REOPENED));
+        _eq(uint8(vw.getDeal(id).status), uint8(GroupBondBase.Status.REOPENED));
         vm.warp(block.timestamp + 24 * H + 1);
         _rule(id, GroupBondBase.Verdict.INSUFFICIENT_EVIDENCE, false);
-        _eq(uint8(gb.getDeal(id).status), uint8(GroupBondBase.Status.RESOLVED));
-        _eq(gb.vendorInfo(vendor).inconclusive, 1);
+        _eq(uint8(vw.getDeal(id).status), uint8(GroupBondBase.Status.RESOLVED));
+        _eq(vw.vendorInfo(vendor).inconclusive, 1);
         _eq(gb.claimable(buyer), 2 * U);
         _locks(id);
         _accounting();
@@ -395,7 +397,7 @@ contract GroupBondBaseTest is Test {
         gb.closeStalledDispute(id);
         vm.warp(block.timestamp + 168 * H + 1);
         gb.closeStalledDispute(id);
-        _eq(gb.getDeal(id).compensation, 0);
+        _eq(vw.getDeal(id).compensation, 0);
         _eq(gb.claimable(buyer), 2 * U);
         _locks(id);
         _accounting();
@@ -479,7 +481,7 @@ contract GroupBondBaseTest is Test {
         gb.cancelDeal(id);
         vm.prank(admin);
         gb.removeVendor(vendor);
-        _eq(gb.groupInfo("deal_hub").vendorsApproved, 0);
+        _eq(vw.groupInfo("deal_hub").vendorsApproved, 0);
         _rv(GroupBondBase.E.VendorCannotBeApprovedNow);
         vm.prank(admin);
         gb.approveVendor(vendor);
@@ -491,7 +493,7 @@ contract GroupBondBaseTest is Test {
     function test_silent_bound_buyer_win_is_delayed_and_capped() public {
         uint256 id = _silentDisputed(4 * U);
         _rule(id, GroupBondBase.Verdict.BUYER_WINS, true);
-        GroupBondBase.Deal memory d = gb.getDeal(id);
+        GroupBondBase.Deal memory d = vw.getDeal(id);
         _eq(uint8(d.status), uint8(GroupBondBase.Status.PAYOUT_PENDING));
         _eq(d.pendingComp, U);
         _eq(gb.claimable(buyer), 0);
@@ -499,7 +501,7 @@ contract GroupBondBaseTest is Test {
         gb.finalizePayout(id);
         vm.warp(block.timestamp + 168 * H);
         gb.finalizePayout(id);
-        d = gb.getDeal(id);
+        d = vw.getDeal(id);
         _eq(d.compensation, U);
         _eq(d.paidGroup, 0);
         _eq(gb.claimable(buyer), 3 * U);
@@ -510,7 +512,7 @@ contract GroupBondBaseTest is Test {
     function test_silent_win_without_review_flag_is_downgraded() public {
         uint256 id = _silentDisputed(4 * U);
         _rule(id, GroupBondBase.Verdict.BUYER_WINS, false);
-        GroupBondBase.Deal memory d = gb.getDeal(id);
+        GroupBondBase.Deal memory d = vw.getDeal(id);
         _eq(uint8(d.status), uint8(GroupBondBase.Status.REOPENED));
         _eq(uint8(d.verdict), uint8(GroupBondBase.Verdict.INSUFFICIENT_EVIDENCE));
     }
@@ -523,7 +525,7 @@ contract GroupBondBaseTest is Test {
         gb.challengePayout(id, "I never saw this payment", "");
         vm.prank(vendor);
         gb.challengePayout(id, "My bank shows no incoming transfer", "https://example.com/stmt");
-        _eq(uint8(gb.getDeal(id).status), uint8(GroupBondBase.Status.CHALLENGED));
+        _eq(uint8(vw.getDeal(id).status), uint8(GroupBondBase.Status.CHALLENGED));
         vm.warp(block.timestamp + 24 * H + 1);
         _rule(id, GroupBondBase.Verdict.SELLER_WINS, false);
         _eq(gb.claimable(vendor), 2 * U);
@@ -548,7 +550,7 @@ contract GroupBondBaseTest is Test {
         gb.challengePayout(id, "My bank shows no incoming transfer", "");
         vm.warp(block.timestamp + 24 * H + 1);
         _rule(id, GroupBondBase.Verdict.BUYER_WINS, true);
-        GroupBondBase.Deal memory d = gb.getDeal(id);
+        GroupBondBase.Deal memory d = vw.getDeal(id);
         _eq(uint8(d.status), uint8(GroupBondBase.Status.RESOLVED));
         _eq(d.compensation, U);
         _accounting();
@@ -568,11 +570,11 @@ contract GroupBondBaseTest is Test {
             vm.prank(b);
             gb.confirmDelivery(id);
         }
-        GroupBondBase.VendorInfo memory v = gb.vendorInfo(vendor);
+        GroupBondBase.VendorInfo memory v = vw.vendorInfo(vendor);
         _eq(v.uniqueBuyers, 2);
         _eq(v.completedVerified, 5);
         vm.warp(block.timestamp + 340 * H);
-        assertLt(gb.vendorInfo(vendor).uniqueBuyers, 5);
+        assertLt(vw.vendorInfo(vendor).uniqueBuyers, 5);
     }
 
     function test_arbiter_and_owner_are_fixed_at_deploy() public {

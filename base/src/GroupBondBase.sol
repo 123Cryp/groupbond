@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-contract GroupBondBase {
+abstract contract GroupBondStore {
     enum Status { OPEN, PAYMENT_CLAIMED, ACTIVE, DELIVERED, COMPLETED, DISPUTED, REOPENED, RESOLVED, CANCELLED, EXPIRED, PAYOUT_PENDING, CHALLENGED }
     enum Verdict { NONE, BUYER_WINS, SELLER_WINS, SPLIT, INSUFFICIENT_EVIDENCE }
     enum E { Reentrancy, OnlyOwner, ArbiterRequired, BadUnit, NothingProposed, ChangeIsStillLocked, ZeroAddress, NotARegisteredVendor, NotAGroupAdmin, UnknownDeal, InvalidSlug, SlugTaken, AlreadyAdmin, AlreadyVendor, InvalidName, InvalidPlatform, BadUrl, PoolBelowMinimum, NoValue, AmountMustBePositive, AmountExceedsFreePool, UnknownGroup, InvalidHandle, AlreadyRegistered, AdminCannotSell, HandleTaken, BondBelowMinimum, AmountExceedsFreeBond, VendorIsNotInYourGroup, VendorCannotBeApprovedNow, VendorIsNotApproved, AlreadyRemoved, VendorHasActiveDeals, ItemLength, PriceLength, ProtectBelowMinimum, ProtectAboveLevelCap, DeliveryHours, NotEnoughFreeVendorBond, NotEnoughFreeGroupPool, OnlyVendor, DealIsNotOpen, OfferHasNotExpired, DealNotOpen, OfferExpired, VendorCannotBuyOwnDeal, AdminCannotBuyInOwnGroup, WrongDeposit, PaymentRefLength, ClaimWasRejected, NoPaymentClaimToAnswer, ReasonLength, NoPaymentClaimPending, VendorStillHasTime, DealIsNotActive, DeliveryTextLength, OnlyBuyer, DeliveryNotClaimed, ReviewWindowStillOpen, DisputeWindowStillOpen, NotDisputableNow, ClaimLength, NotInDispute, WindowClosed, OnlyParties, EvidenceLimit, TextLength, OnlyArbiter, EvidenceWindowOpen, VerdictRequired, ReasonTooLong, NoPendingPayout, ChallengeWindowClosed, PayoutIsStillLocked, ArbiterStillHasTime, PaymentEvidenceNotReviewed, PayoutExceedsLocks, NothingToClaim, TransferFailed, NoFees, DealCannotBeFinalized }
@@ -174,6 +174,186 @@ contract GroupBondBase {
     uint256 public constant MAX_EVIDENCE_PER_SIDE = 3;
     uint256 public constant MAX_DELIVERY_HOURS = 720;
 
+
+    uint256 public treasury;
+    uint256 public burned;
+    uint256 public depositsHeld;
+    uint256 public totalClaimable;
+    uint256 public dealCount;
+
+    mapping(bytes32 => Group) internal groups;
+    mapping(address => bytes32) internal groupOfAdmin;
+    bytes32[] internal groupList;
+    mapping(address => Vendor) internal vendors;
+    mapping(bytes32 => address) internal handleOwners;
+    address[] internal vendorList;
+    mapping(uint256 => Deal) internal deals;
+    mapping(uint256 => Evidence[]) internal evidences;
+    mapping(address => uint256) public claimable;
+    mapping(bytes32 => uint256) public pairCounts;
+    mapping(bytes32 => bool) internal rejectedClaim;
+
+    uint256 private lockFlag = 1;
+
+    function _f(E e) internal pure {
+        revert Err(e);
+    }
+
+    function _level(uint256 bond) internal pure returns (uint8) {
+        if (bond >= PREMIUM_BOND) return 2;
+        if (bond >= VERIFIED_BOND) return 1;
+        return 0;
+    }
+
+    function _maxProtect(uint8 level) internal pure returns (uint256) {
+        if (level == 2) return MAX_PROTECT_PREMIUM;
+        if (level == 1) return MAX_PROTECT_VERIFIED;
+        return MAX_PROTECT_STARTER;
+    }
+
+    function _min(uint256 a, uint256 b) internal pure returns (uint256) {
+        return a < b ? a : b;
+    }
+
+    function _available(Vendor storage v, Group storage g) internal view returns (uint256) {
+        if (v.bond <= v.locked || g.pool <= g.locked) return 0;
+        uint256 vfree = v.bond - v.locked;
+        uint256 gfree = g.pool - g.locked;
+        return _min(_maxProtect(_level(v.bond)), _min((vfree * 10000) / VENDOR_BPS, (gfree * 10000) / GROUP_BPS));
+    }
+
+    function _vendor(address who) internal view returns (Vendor storage v) {
+        v = vendors[who];
+        if (!(v.exists)) _f(E.NotARegisteredVendor);
+    }
+
+    function _deal(uint256 id) internal view returns (Deal storage d) {
+        if (!(id < dealCount)) _f(E.UnknownDeal);
+        d = deals[id];
+    }
+
+    function _groupInfo(bytes32 key) internal view returns (GroupInfo memory i) {
+        Group storage g = groups[key];
+        if (!(g.exists)) _f(E.UnknownGroup);
+        i.slug = g.slug;
+        i.admin = g.admin;
+        i.name = g.name;
+        i.platform = g.platform;
+        i.inviteUrl = g.inviteUrl;
+        i.pool = g.pool;
+        i.locked = g.locked;
+        i.compensated = g.compensated;
+        i.createdAt = g.createdAt;
+        i.vendorsTotal = g.vendorsTotal;
+        i.vendorsApproved = g.vendorsApproved;
+        i.dealsBound = g.dealsBound;
+        i.completed = g.completed;
+        i.disputesLost = g.disputesLost;
+        i.disputesWon = g.disputesWon;
+        i.disputesSplit = g.disputesSplit;
+        i.inconclusive = g.inconclusive;
+        i.activeDeals = g.activeDeals;
+    }
+}
+
+contract GroupBondViews is GroupBondStore {
+    function getDeal(uint256 id) external view returns (Deal memory) {
+        return _deal(id);
+    }
+
+    function getEvidence(uint256 id) external view returns (Evidence[] memory) {
+        return evidences[id];
+    }
+
+    function groupKeyOf(string calldata slug) external pure returns (bytes32) {
+        return keccak256(bytes(slug));
+    }
+
+    function groupInfo(string calldata slug) external view returns (GroupInfo memory) {
+        return _groupInfo(keccak256(bytes(slug)));
+    }
+
+    function groupCount() external view returns (uint256) {
+        return groupList.length;
+    }
+
+    function groupAt(uint256 idx) external view returns (GroupInfo memory) {
+        return _groupInfo(groupList[idx]);
+    }
+
+    function groupOf(address admin) external view returns (string memory) {
+        bytes32 key = groupOfAdmin[admin];
+        if (key == bytes32(0)) return "";
+        return groups[key].slug;
+    }
+
+    function vendorInfo(address who) public view returns (VendorInfo memory i) {
+        Vendor storage v = _vendor(who);
+        Group storage g = groups[v.groupKey];
+        i.owner = who;
+        i.groupSlug = g.slug;
+        i.handle = v.handle;
+        i.status = v.status;
+        i.bond = v.bond;
+        i.locked = v.locked;
+        i.available = v.status == VendorStatus.APPROVED ? _available(v, g) : 0;
+        i.createdAt = v.createdAt;
+        i.compensated = v.compensated;
+        i.dealsBound = v.dealsBound;
+        i.completedVerified = v.completedVerified;
+        i.completedAuto = v.completedAuto;
+        i.disputesLost = v.disputesLost;
+        i.disputesSplit = v.disputesSplit;
+        i.disputesWon = v.disputesWon;
+        i.inconclusive = v.inconclusive;
+        i.rejectedClaims = v.rejectedClaims;
+        i.lapsed = v.lapsed;
+        i.activeDeals = v.activeDeals;
+        i.uniqueBuyers = v.uniqueBuyers;
+    }
+
+    function isVendor(address who) external view returns (bool) {
+        return vendors[who].exists;
+    }
+
+    function vendorByHandle(string calldata handle) external view returns (address) {
+        return handleOwners[keccak256(bytes(handle))];
+    }
+
+    function vendorCount() external view returns (uint256) {
+        return vendorList.length;
+    }
+
+    function vendorAt(uint256 idx) external view returns (address) {
+        return vendorList[idx];
+    }
+
+    function getProtection(address who) external view returns (uint256) {
+        Vendor storage v = vendors[who];
+        if (!v.exists || v.status != VendorStatus.APPROVED) return 0;
+        return _available(v, groups[v.groupKey]);
+    }
+
+    function isProtected(address who, uint256 amount) external view returns (bool) {
+        Vendor storage v = vendors[who];
+        if (!v.exists || v.status != VendorStatus.APPROVED) return false;
+        return amount <= _available(v, groups[v.groupKey]);
+    }
+
+    function totalBonds() public view returns (uint256 t) {
+        for (uint256 i = 0; i < vendorList.length; i++) {
+            t += vendors[vendorList[i]].bond;
+        }
+    }
+
+    function totalPools() public view returns (uint256 t) {
+        for (uint256 i = 0; i < groupList.length; i++) {
+            t += groups[groupList[i]].pool;
+        }
+    }
+}
+
+contract GroupBondBase is GroupBondStore {
     uint256 public immutable unit;
     uint256 public immutable offerWindow;
     uint256 public immutable confirmWindow;
@@ -183,28 +363,9 @@ contract GroupBondBase {
     uint256 public immutable arbiterTimeout;
     uint256 public immutable payoutDelay;
     uint256 public immutable trustedMinAge;
-
     address public immutable owner;
     address public immutable arbiter;
-    uint256 public treasury;
-    uint256 public burned;
-    uint256 public depositsHeld;
-    uint256 public totalClaimable;
-    uint256 public dealCount;
-
-    mapping(bytes32 => Group) private groups;
-    mapping(address => bytes32) private groupOfAdmin;
-    bytes32[] private groupList;
-    mapping(address => Vendor) private vendors;
-    mapping(bytes32 => address) private handleOwners;
-    address[] private vendorList;
-    mapping(uint256 => Deal) private deals;
-    mapping(uint256 => Evidence[]) private evidences;
-    mapping(address => uint256) public claimable;
-    mapping(bytes32 => uint256) public pairCounts;
-    mapping(bytes32 => bool) private rejectedClaim;
-
-    uint256 private lockFlag = 1;
+    address private immutable viewsImpl;
 
     event GroupCreated(bytes32 indexed key, string slug, address indexed admin, uint256 pool);
     event PoolChanged(bytes32 indexed key, uint256 pool);
@@ -236,6 +397,7 @@ contract GroupBondBase {
         if (!(arbiter_ != address(0))) _f(E.ArbiterRequired);
         if (!(unit_ >= 1 && unit_ <= 86400)) _f(E.BadUnit);
         owner = msg.sender;
+        viewsImpl = address(new GroupBondViews());
         arbiter = arbiter_;
         unit = unit_;
         offerWindow = 72 * unit_;
@@ -246,33 +408,6 @@ contract GroupBondBase {
         arbiterTimeout = 168 * unit_;
         payoutDelay = 168 * unit_;
         trustedMinAge = 336 * unit_;
-    }
-
-    function _f(E e) private pure {
-        revert Err(e);
-    }
-
-    function _level(uint256 bond) internal pure returns (uint8) {
-        if (bond >= PREMIUM_BOND) return 2;
-        if (bond >= VERIFIED_BOND) return 1;
-        return 0;
-    }
-
-    function _maxProtect(uint8 level) internal pure returns (uint256) {
-        if (level == 2) return MAX_PROTECT_PREMIUM;
-        if (level == 1) return MAX_PROTECT_VERIFIED;
-        return MAX_PROTECT_STARTER;
-    }
-
-    function _min(uint256 a, uint256 b) internal pure returns (uint256) {
-        return a < b ? a : b;
-    }
-
-    function _available(Vendor storage v, Group storage g) internal view returns (uint256) {
-        if (v.bond <= v.locked || g.pool <= g.locked) return 0;
-        uint256 vfree = v.bond - v.locked;
-        uint256 gfree = g.pool - g.locked;
-        return _min(_maxProtect(_level(v.bond)), _min((vfree * 10000) / VENDOR_BPS, (gfree * 10000) / GROUP_BPS));
     }
 
     function _validKey(string memory h, uint256 lo, uint256 hi, bool allowDot) internal pure returns (bool) {
@@ -367,20 +502,10 @@ contract GroupBondBase {
         totalClaimable += amount;
     }
 
-    function _vendor(address who) internal view returns (Vendor storage v) {
-        v = vendors[who];
-        if (!(v.exists)) _f(E.NotARegisteredVendor);
-    }
-
     function _adminGroup(address who) internal view returns (Group storage g, bytes32 key) {
         key = groupOfAdmin[who];
         if (!(key != bytes32(0))) _f(E.NotAGroupAdmin);
         g = groups[key];
-    }
-
-    function _deal(uint256 id) internal view returns (Deal storage d) {
-        if (!(id < dealCount)) _f(E.UnknownDeal);
-        d = deals[id];
     }
 
     function _release(Deal storage d, Vendor storage v, Group storage g) internal {
@@ -910,121 +1035,34 @@ contract GroupBondBase {
         _credit(owner, amt);
     }
 
-    function getDeal(uint256 id) external view returns (Deal memory) {
-        return _deal(id);
-    }
-
-    function getEvidence(uint256 id) external view returns (Evidence[] memory) {
-        return evidences[id];
-    }
-
-    function groupKeyOf(string calldata slug) external pure returns (bytes32) {
-        return keccak256(bytes(slug));
-    }
-
-    function groupInfo(string calldata slug) external view returns (GroupInfo memory) {
-        return _groupInfo(keccak256(bytes(slug)));
-    }
-
-    function _groupInfo(bytes32 key) internal view returns (GroupInfo memory i) {
-        Group storage g = groups[key];
-        if (!(g.exists)) _f(E.UnknownGroup);
-        i.slug = g.slug;
-        i.admin = g.admin;
-        i.name = g.name;
-        i.platform = g.platform;
-        i.inviteUrl = g.inviteUrl;
-        i.pool = g.pool;
-        i.locked = g.locked;
-        i.compensated = g.compensated;
-        i.createdAt = g.createdAt;
-        i.vendorsTotal = g.vendorsTotal;
-        i.vendorsApproved = g.vendorsApproved;
-        i.dealsBound = g.dealsBound;
-        i.completed = g.completed;
-        i.disputesLost = g.disputesLost;
-        i.disputesWon = g.disputesWon;
-        i.disputesSplit = g.disputesSplit;
-        i.inconclusive = g.inconclusive;
-        i.activeDeals = g.activeDeals;
-    }
-
-    function groupCount() external view returns (uint256) {
-        return groupList.length;
-    }
-
-    function groupAt(uint256 idx) external view returns (GroupInfo memory) {
-        return _groupInfo(groupList[idx]);
-    }
-
-    function groupOf(address admin) external view returns (string memory) {
-        bytes32 key = groupOfAdmin[admin];
-        if (key == bytes32(0)) return "";
-        return groups[key].slug;
-    }
-
-    function vendorInfo(address who) public view returns (VendorInfo memory i) {
-        Vendor storage v = _vendor(who);
-        Group storage g = groups[v.groupKey];
-        i.owner = who;
-        i.groupSlug = g.slug;
-        i.handle = v.handle;
-        i.status = v.status;
-        i.bond = v.bond;
-        i.locked = v.locked;
-        i.available = v.status == VendorStatus.APPROVED ? _available(v, g) : 0;
-        i.createdAt = v.createdAt;
-        i.compensated = v.compensated;
-        i.dealsBound = v.dealsBound;
-        i.completedVerified = v.completedVerified;
-        i.completedAuto = v.completedAuto;
-        i.disputesLost = v.disputesLost;
-        i.disputesSplit = v.disputesSplit;
-        i.disputesWon = v.disputesWon;
-        i.inconclusive = v.inconclusive;
-        i.rejectedClaims = v.rejectedClaims;
-        i.lapsed = v.lapsed;
-        i.activeDeals = v.activeDeals;
-        i.uniqueBuyers = v.uniqueBuyers;
-    }
-
-    function isVendor(address who) external view returns (bool) {
-        return vendors[who].exists;
-    }
-
-    function vendorByHandle(string calldata handle) external view returns (address) {
-        return handleOwners[keccak256(bytes(handle))];
-    }
-
-    function vendorCount() external view returns (uint256) {
-        return vendorList.length;
-    }
-
-    function vendorAt(uint256 idx) external view returns (address) {
-        return vendorList[idx];
-    }
-
-    function getProtection(address who) external view returns (uint256) {
-        Vendor storage v = vendors[who];
-        if (!v.exists || v.status != VendorStatus.APPROVED) return 0;
-        return _available(v, groups[v.groupKey]);
-    }
-
-    function isProtected(address who, uint256 amount) external view returns (bool) {
-        Vendor storage v = vendors[who];
-        if (!v.exists || v.status != VendorStatus.APPROVED) return false;
-        return amount <= _available(v, groups[v.groupKey]);
-    }
-
-    function totalBonds() public view returns (uint256 t) {
-        for (uint256 i = 0; i < vendorList.length; i++) {
-            t += vendors[vendorList[i]].bond;
+    fallback() external {
+        address t = viewsImpl;
+        assembly {
+            calldatacopy(0, 0, calldatasize())
+            let ok := delegatecall(gas(), t, 0, calldatasize(), 0, 0)
+            returndatacopy(0, 0, returndatasize())
+            switch ok
+            case 0 { revert(0, returndatasize()) }
+            default { return(0, returndatasize()) }
         }
     }
+}
 
-    function totalPools() public view returns (uint256 t) {
-        for (uint256 i = 0; i < groupList.length; i++) {
-            t += groups[groupList[i]].pool;
-        }
-    }
+interface IGroupBondViews {
+    function getDeal(uint256 id) external view returns (GroupBondStore.Deal memory);
+    function getEvidence(uint256 id) external view returns (GroupBondStore.Evidence[] memory);
+    function groupKeyOf(string calldata slug) external pure returns (bytes32);
+    function groupInfo(string calldata slug) external view returns (GroupBondStore.GroupInfo memory);
+    function groupCount() external view returns (uint256);
+    function groupAt(uint256 idx) external view returns (GroupBondStore.GroupInfo memory);
+    function groupOf(address admin) external view returns (string memory);
+    function vendorInfo(address who) external view returns (GroupBondStore.VendorInfo memory i);
+    function isVendor(address who) external view returns (bool);
+    function vendorByHandle(string calldata handle) external view returns (address);
+    function vendorCount() external view returns (uint256);
+    function vendorAt(uint256 idx) external view returns (address);
+    function getProtection(address who) external view returns (uint256);
+    function isProtected(address who, uint256 amount) external view returns (bool);
+    function totalBonds() external view returns (uint256 t);
+    function totalPools() external view returns (uint256 t);
 }

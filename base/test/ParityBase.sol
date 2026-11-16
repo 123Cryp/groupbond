@@ -38,6 +38,7 @@ abstract contract ParityBase is Test {
         address vendor = makeAddr("vendor");
         address buyer = makeAddr("buyer");
         GroupBondBase gb = new GroupBondBase(arbiter, H);
+        IGroupBondViews vw = IGroupBondViews(address(gb));
         vm.deal(admin, 100 ether);
         vm.deal(vendor, 100 ether);
         vm.deal(buyer, 100 ether);
@@ -81,9 +82,9 @@ abstract contract ParityBase is Test {
             }
         }
 
-        GroupBondBase.Deal memory d = gb.getDeal(id);
-        GroupBondBase.VendorInfo memory vi = gb.vendorInfo(vendor);
-        GroupBondBase.GroupInfo memory gi = gb.groupInfo("parity_hub");
+        GroupBondBase.Deal memory d = vw.getDeal(id);
+        GroupBondBase.VendorInfo memory vi = vw.vendorInfo(vendor);
+        GroupBondBase.GroupInfo memory gi = vw.groupInfo("parity_hub");
         o.status = uint256(uint8(d.status));
         o.verdict = uint256(uint8(d.verdict));
         o.compensation = d.compensation;
