@@ -1,0 +1,45 @@
+name: Size lab
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/size-lab.yml"
+jobs:
+  size:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: legacy-runs1
+            ir: "false"
+            runs: "1"
+          - name: legacy-runs200
+            ir: "false"
+            runs: "200"
+          - name: ir-runs1-nometa
+            ir: "true"
+            runs: "1"
+    name: ${{ matrix.name }}
+    defaults:
+      run:
+        working-directory: base
+    steps:
+      - uses: actions/checkout@v4
+      - uses: foundry-rs/foundry-toolchain@v1
+      - run: forge install --no-git foundry-rs/forge-std
+      - run: |
+          mkdir lab && cp -r src lab/src
+          cat > lab/foundry.toml <<TOML
+          [profile.default]
+          src = "src"
+          out = "out"
+          libs = ["../lib"]
+          solc_version = "0.8.24"
+          via_ir = ${{ matrix.ir }}
+          optimizer = true
+          optimizer_runs = ${{ matrix.runs }}
+          bytecode_hash = "none"
+          cbor_metadata = false
+          TOML
+          cd lab && forge build --sizes || true
