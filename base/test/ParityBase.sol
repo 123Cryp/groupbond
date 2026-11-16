@@ -75,16 +75,16 @@ abstract contract ParityBase is Test {
             } else {
                 if (i > 0) vm.warp(block.timestamp + 24 * H + 1);
                 vm.prank(arbiter);
-                try gb.resolveDispute(id, GroupBondBase.Verdict(verdicts[i]), bytes32("PARITY"), "parity", reviewed[i]) {} catch {
+                try gb.resolveDispute(id, GroupBondStore.Verdict(verdicts[i]), bytes32("PARITY"), "parity", reviewed[i]) {} catch {
                     o.reverted = true;
                     break;
                 }
             }
         }
 
-        GroupBondBase.Deal memory d = vw.getDeal(id);
-        GroupBondBase.VendorInfo memory vi = vw.vendorInfo(vendor);
-        GroupBondBase.GroupInfo memory gi = vw.groupInfo("parity_hub");
+        GroupBondStore.Deal memory d = vw.getDeal(id);
+        GroupBondStore.VendorInfo memory vi = vw.vendorInfo(vendor);
+        GroupBondStore.GroupInfo memory gi = vw.groupInfo("parity_hub");
         o.status = uint256(uint8(d.status));
         o.verdict = uint256(uint8(d.verdict));
         o.compensation = d.compensation;
@@ -98,7 +98,7 @@ abstract contract ParityBase is Test {
         o.vendorLocked = vi.locked;
         o.groupPool = gi.pool;
         o.groupLocked = gi.locked;
-        o.suspended = vi.status == GroupBondBase.VendorStatus.SUSPENDED ? 1 : 0;
+        o.suspended = vi.status == GroupBondStore.VendorStatus.SUSPENDED ? 1 : 0;
         o.lost = vi.disputesLost;
         o.split = vi.disputesSplit;
         o.won = vi.disputesWon;
