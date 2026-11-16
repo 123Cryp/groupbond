@@ -1,0 +1,22 @@
+name: Base contract tests
+on:
+  push:
+    paths:
+      - "base/**"
+      - ".github/workflows/base.yml"
+  pull_request:
+    paths:
+      - "base/**"
+  workflow_dispatch:
+jobs:
+  forge:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: base
+    steps:
+      - uses: actions/checkout@v4
+      - uses: foundry-rs/foundry-toolchain@v1
+      - run: forge install --no-git foundry-rs/forge-std
+      - run: forge build --sizes
+      - run: forge test -vv

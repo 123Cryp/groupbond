@@ -39,3 +39,10 @@ Silent-bound deals with a buyer-favourable ruling go to PAYOUT_PENDING for 7 day
 ## GenVM notes
 
 Header lines are exactly the version line and the Depends line. No comments or docstrings in the contract. Collections are class-level annotations and never assigned in `__init__`. Views return JSON strings.
+
+## Base port
+
+- `GroupBondBase.sol` mirrors the Python state machine: same statuses, same lock maths, same payout order (vendor first, then pool).
+- Differences: disputes are ruled by `arbiter` through `resolveDispute(id, verdict, reasonCode, reason, paymentEvidenceReviewed)`. The arbiter is frozen per dispute when it is opened, and a change of arbiter is timelocked. Bad input reverts instead of returning `REFUNDED:`.
+- A silent-bound deal whose buyer win is not flagged as reviewed is downgraded to INSUFFICIENT_EVIDENCE, as in the Python contract.
+- `tests/parity_scenarios.json` holds 76 dispute scenarios computed by an independent model in `scripts/gen_parity.py`. The Python suite replays them against the GenLayer contract and `ParityScenarios.t.sol` replays them against the Solidity contract.
