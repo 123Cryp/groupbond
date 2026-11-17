@@ -1,6 +1,8 @@
 name: Unzip uploads
 on:
   push:
+    branches:
+      - main
     paths:
       - "*.zip"
 permissions:
