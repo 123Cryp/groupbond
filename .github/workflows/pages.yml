@@ -25,5 +25,7 @@ jobs:
       - uses: actions/upload-pages-artifact@v3
         with:
           path: frontend
+      - name: Wait for the artifact to be indexed
+        run: sleep 25
       - id: deployment
         uses: actions/deploy-pages@v4
