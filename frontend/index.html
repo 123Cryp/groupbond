@@ -264,8 +264,9 @@ a.item:hover{background:var(--surface-2)}
 .how li b::before{content:counter(step);display:inline-grid;place-items:center;width:22px;height:22px;margin-right:8px;border-radius:50%;background:var(--sig-soft);color:var(--sig);font-size:12px}
 
 .split{display:grid;grid-template-columns:minmax(0,1fr);gap:6px}
-.outs{display:grid;grid-template-columns:minmax(0,1fr);gap:10px}
-@media (min-width:760px){.outs{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.outs{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+.out .kv{grid-template-columns:minmax(0,1fr);gap:2px}
+.out .kv dd{margin-bottom:8px;overflow-wrap:normal;white-space:nowrap}
 .out{border:1px solid var(--line);border-radius:var(--r-md);padding:12px 14px;display:grid;gap:8px;background:var(--surface)}
 .out h3{margin:0;font-size:var(--t-sm);font-weight:700}
 .quote{font-size:var(--t-sm);min-height:20px}
