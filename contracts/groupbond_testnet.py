@@ -330,6 +330,32 @@ def _available(v, g):
     return min(cap, vfree * 10000 // VENDOR_BPS, gfree * 10000 // GROUP_BPS)
 
 
+def _outcome_math(protect, vlock, glock, bound_by, verdict):
+    comp = 0
+    if verdict == "BUYER_WINS":
+        comp = protect
+    elif verdict == "SPLIT":
+        comp = protect // 2
+    capped = False
+    if comp > 0 and bound_by != "seller":
+        cap = protect * TIMEOUT_CAP_BPS // 10000
+        if comp > cap:
+            comp = cap
+            capped = True
+    fee = comp * FEE_BPS // 10000
+    total = comp + fee
+    vpay = min(total, vlock)
+    gpay = total - vpay
+    return {
+        "buyer_receives": str(comp),
+        "fee": str(fee),
+        "vendor_pays": str(vpay),
+        "group_pays": str(gpay),
+        "capped": capped,
+        "covered": gpay <= glock,
+    }
+
+
 def _group_dict(g):
     return {
         "slug": g.slug,
@@ -1428,6 +1454,62 @@ class GroupBond(gl.Contract):
         if v.status != "APPROVED":
             return False
         return int(amount) <= _available(v, self.groups[v.group])
+
+    @gl.public.view
+    def quote(self, key: str, protect_amount: int) -> str:
+        k = self._resolve_vendor_key(key)
+        if not _has(self.vendors, k):
+            return json.dumps({"ok": False, "reason": "unknown vendor"})
+        v = self.vendors[k]
+        g = self.groups[v.group]
+        p = int(protect_amount)
+        vlock = p * VENDOR_BPS // 10000
+        glock = p * GROUP_BPS // 10000
+        reason = ""
+        if v.status != "APPROVED":
+            reason = "vendor is not approved by the group admin"
+        elif p < MIN_PROTECT:
+            reason = "protected amount below minimum"
+        elif p > _max_protect(_level(int(v.bond))):
+            reason = "protected amount above level cap"
+        elif vlock > int(v.bond) - int(v.locked):
+            reason = "not enough free vendor bond"
+        elif glock > int(g.pool) - int(g.locked):
+            reason = "not enough free group pool"
+        return json.dumps(
+            {
+                "ok": reason == "",
+                "reason": reason,
+                "protect": str(p),
+                "vendor_lock": str(vlock),
+                "group_lock": str(glock),
+                "available": str(_available(v, g) if v.status == "APPROVED" else 0),
+                "worst_case_total": str(p + p * FEE_BPS // 10000),
+            }
+        )
+
+    @gl.public.view
+    def preview_outcomes(self, deal_id: str) -> str:
+        if not _has(self.deals, str(deal_id)):
+            return ""
+        d = self.deals[str(deal_id)]
+        assumed = d.bound_by == ""
+        by = "seller" if assumed else d.bound_by
+        out = {}
+        for vd in ("SELLER_WINS", "SPLIT", "BUYER_WINS"):
+            out[vd] = _outcome_math(int(d.protect), int(d.vendor_lock), int(d.group_lock), by, vd)
+        return json.dumps(
+            {
+                "deal_id": d.deal_id,
+                "status": d.status,
+                "bound_by": by,
+                "assumed": assumed,
+                "needs_payment_review": by != "seller",
+                "cap_bps": 10000 if by == "seller" else TIMEOUT_CAP_BPS,
+                "settled": d.status == "RESOLVED",
+                "outcomes": out,
+            }
+        )
 
     @gl.public.view
     def get_stats(self) -> str:

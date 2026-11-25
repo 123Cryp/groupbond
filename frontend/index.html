@@ -264,6 +264,12 @@ a.item:hover{background:var(--surface-2)}
 .how li b::before{content:counter(step);display:inline-grid;place-items:center;width:22px;height:22px;margin-right:8px;border-radius:50%;background:var(--sig-soft);color:var(--sig);font-size:12px}
 
 .split{display:grid;grid-template-columns:minmax(0,1fr);gap:6px}
+.outs{display:grid;grid-template-columns:minmax(0,1fr);gap:10px}
+@media (min-width:760px){.outs{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.out{border:1px solid var(--line);border-radius:var(--r-md);padding:12px 14px;display:grid;gap:8px;background:var(--surface)}
+.out h3{margin:0;font-size:var(--t-sm);font-weight:700}
+.quote{font-size:var(--t-sm);min-height:20px}
+.quote.bad{color:var(--neg)} .quote.good{color:var(--ink-2)}
 .bar{display:flex;height:10px;border-radius:999px;overflow:hidden;background:var(--sunken)}
 .bar i{display:block;height:100%}
 .bar .v{background:var(--sig)} .bar .g{background:var(--warn)}
@@ -1104,6 +1110,31 @@ async function viewSell(root, slugPref, tok) {
       h("div", { class: "panel stack" }, h("h2", { text: "How your bond is used" }), h("p", { class: "muted small", text: "Each deal you list locks part of your bond and part of the group's pool. If you lose a dispute your lock pays the buyer first and the pool covers the rest." }), splitBar(10n * WEI), h("p", { class: "xs", text: "Example for a 10 GEN protected deal." })))));
 }
 
+function outcomesPanel(pv) {
+  const names = { SELLER_WINS: ["pos", "Vendor wins"], SPLIT: ["warn", "Split"], BUYER_WINS: ["neg", "Buyer wins"] };
+  const note = pv.settled ? "This deal is settled. The figures below are what a ruling of each kind would have paid."
+    : pv.needs_payment_review ? "The vendor stayed silent on payment, so compensation is capped at " + pv.cap_bps / 100 + "% and only counts if validators see payment evidence."
+    : pv.assumed ? "Assumes the vendor confirms payment. If the vendor stays silent, compensation is capped at 25%." : "Payment was confirmed by the vendor, so the buyer is covered in full.";
+  return h("div", { class: "panel stack" }, h("h2", { text: "What each ruling would pay" }), h("p", { class: "muted small", text: note }),
+    h("div", { class: "outs" }, ["SELLER_WINS", "SPLIT", "BUYER_WINS"].map((k) => { const o = pv.outcomes[k];
+      return h("div", { class: "out" }, h("h3", {}, chip(names[k][0], names[k][1])),
+        kv([["Buyer receives", gen(o.buyer_receives, 3)], ["Vendor lock pays", gen(o.vendor_pays, 3)], ["Group pool pays", gen(o.group_pays, 3)], ["Protocol fee", gen(o.fee, 3)]]),
+        o.capped ? h("p", { class: "small muted", text: "Capped by the silence rule." }) : null); })));
+}
+function quoteLine(box, owner) {
+  let seq = 0, timer = 0;
+  return (w) => {
+    clearTimeout(timer); const my = ++seq;
+    if (!w || w <= 0n) { put(box, null); box.className = "quote"; return; }
+    timer = setTimeout(async () => {
+      let q = null;
+      try { q = await readJson("quote", [owner, w]); } catch (e) { q = null; }
+      if (my !== seq || !q) { if (my === seq) { put(box, null); box.className = "quote"; } return; }
+      if (q.ok) { box.className = "quote good"; put(box, "Locks " + genStr(q.vendor_lock, 3) + " GEN from your bond and " + genStr(q.group_lock, 3) + " GEN from the group pool. If a buyer wins in full, " + genStr(q.worst_case_total, 3) + " GEN leaves those locks, your bond first."); }
+      else { box.className = "quote bad"; put(box, "The contract would refuse this: " + q.reason + "."); }
+    }, 350);
+  };
+}
 async function viewVendor(root, tok) {
   put(root, skel(200), skel(120));
   const [v, deals, g] = await Promise.all([readJson("get_vendor", [account.toLowerCase()]), readJson("deals_of", [account.toLowerCase()]), readJson("get_group", [me.group])]);
@@ -1133,8 +1164,9 @@ async function viewVendor(root, tok) {
     const item = textIn("dItem", "What are you selling?", "", { maxlength: "200" }), price = textIn("dPrice", "e.g. 40 USD", "", { maxlength: "80" }), link = textIn("dLink", "https://… (optional)", "", { inputmode: "url" });
     const protect = numIn("dProtect", "GEN", "");
     const fI = field("Item", item, "3 to 200 characters.", { req: true }), fP = field("Price as you quote it", price, "Text only; payment happens off-chain.", { req: true }), fL = field("Listing link", link, "Optional. Starts with https://. It is stored, never opened."), fR = field("Protected amount in GEN", protect, `Between ${genStr(P().min_protect, 0)} and ${genStr(v.available_protection, 2)} GEN right now. Buyers are compensated up to this amount.`, { req: true });
-    const split = h("div", { class: "split" });
-    const draw = () => { const w = genToWei(protect.value); put(split, w && w > 0n ? splitBar(w) : null); };
+    const split = h("div", { class: "split" }), quoteBox = h("div", { class: "quote", "aria-live": "polite" });
+    const ask = quoteLine(quoteBox, v.owner);
+    const draw = () => { const w = genToWei(protect.value); put(split, w && w > 0n ? splitBar(w) : null); ask(w); };
     protect.addEventListener("input", draw);
     const cta = h("button", { class: "btn btn-primary block", type: "button", text: "List deal", onclick: (e) => runButton(e.currentTarget, async () => {
       const it = item.value.trim(), pr = price.value.trim(), li = link.value.trim(), w = genToWei(protect.value);
@@ -1147,7 +1179,7 @@ async function viewVendor(root, tok) {
       if (!(await confirmAction({ title: "List this deal?", intro: "The locks below stay frozen until the deal ends.", rows: [["Item", it], ["Protected", gen(w)], ["Your lock", gen(bps(w, P().vendor_bps))], ["Group pool lock", gen(bps(w, P().group_bps))], ["Delivery window", hours + " hours after payment is confirmed"]], confirm: "List deal" }))) return;
       await write(ui2, "list deal", "create_deal", [it, pr, li, w, BigInt(hours)], 0n, () => {});
     }) });
-    create = h("div", { class: "panel stack" }, h("h2", { text: "List a deal" }), fI, fP, fL, fR, split,
+    create = h("div", { class: "panel stack" }, h("h2", { text: "List a deal" }), fI, fP, fL, fR, split, quoteBox,
       h("div", { class: "field" }, h("p", { class: "label", text: "Delivery window" }), picker([[24, "24 h"], [48, "48 h"], [72, "3 days"], [168, "7 days"], [336, "14 days"]], hours, (x) => (hours = x)), h("p", { class: "help", text: "How long you have to deliver once the buyer's payment is confirmed." })), cta, ui2.el);
   }
   const leave = v.status !== "REMOVED" ? h("button", { class: "btn btn-danger", type: "button", text: "Leave group", onclick: (e) => runButton(e.currentTarget, async () => {
@@ -1297,7 +1329,7 @@ async function viewDeal(root, id, tok) {
   const d = await readJson("get_deal", [id]);
   if (tok !== routeTok) return;
   if (!d) { put(root, h("div", { class: "panel" }, empty("Deal not found", "There is no deal with this number on this contract.", h("a", { class: "btn btn-secondary", href: "#/deals", text: "All deals" })))); return; }
-  const [g, ev] = await Promise.all([readJson("get_group", [d.group]), d.ev_buyer + d.ev_seller > 0 ? readJson("get_evidence", [id]) : []]);
+  const [g, ev, pv] = await Promise.all([readJson("get_group", [d.group]), d.ev_buyer + d.ev_seller > 0 ? readJson("get_evidence", [id]) : [], ["CANCELLED", "EXPIRED", "COMPLETED"].includes(d.status) ? null : readJson("preview_outcomes", [id]).catch(() => null)]);
   if (tok !== routeTok) return;
   const ui = txPanel();
   const role = same(account, d.seller) ? "You are the vendor on this deal." : same(account, d.buyer) ? "You are the buyer on this deal." : same(account, g?.admin) ? "You are the admin of this deal's group." : null;
@@ -1320,7 +1352,7 @@ async function viewDeal(root, id, tok) {
   }
   put(root, h("div", { class: "stack-lg" }, pageHead(d.item, null, ["#/deals", "All deals"]),
     role ? h("p", { class: "callout", text: role }) : null,
-    h("div", { class: "cols act-first" }, h("div", { class: "stack-lg" }, facts, h("div", { class: "panel" }, h("h2", { text: "Timeline" }), timelineFor(d)), proof, evidence, verdict),
+    h("div", { class: "cols act-first" }, h("div", { class: "stack-lg" }, facts, pv ? outcomesPanel(pv) : null, h("div", { class: "panel" }, h("h2", { text: "Timeline" }), timelineFor(d)), proof, evidence, verdict),
       h("div", { class: "sticky" }, dealActions(d, g, ui)))));
 }
 

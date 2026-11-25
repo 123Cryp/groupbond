@@ -620,5 +620,75 @@ class TestRandomised(Base):
             self.assertIn(m, seen)
 
 
+class TestPreviews(Base):
+    def test_quote_matches_real_locks(self):
+        self.setup_market()
+        q = self.view("quote", "shop_one", 4 * GEN)
+        self.assertTrue(q["ok"])
+        did = self.deal(4)
+        d = self.view("get_deal", did)
+        self.assertEqual(q["vendor_lock"], d["vendor_lock"])
+        self.assertEqual(q["group_lock"], d["group_lock"])
+        self.assertEqual(q["worst_case_total"], str(4 * GEN + 4 * GEN * 500 // 10000))
+
+    def test_quote_reasons_follow_create_deal(self):
+        self.setup_market(bond=3)
+        self.assertEqual(self.view("quote", VENDOR, GEN // 2)["reason"], "protected amount below minimum")
+        self.assertEqual(self.view("quote", VENDOR, 41 * GEN)["reason"], "protected amount above level cap")
+        self.assertEqual(self.view("quote", "nobody", GEN)["reason"], "unknown vendor")
+        self.deal(3)
+        q = self.view("quote", VENDOR, 4 * GEN)
+        self.assertFalse(q["ok"])
+        self.assertEqual(q["reason"], "not enough free vendor bond")
+        with self.assertRaises(Exception):
+            self.deal(4)
+
+    def test_quote_unapproved_vendor(self):
+        self.group()
+        self.vendor(approve=False)
+        q = self.view("quote", VENDOR, 2 * GEN)
+        self.assertFalse(q["ok"])
+        self.assertEqual(q["reason"], "vendor is not approved by the group admin")
+        self.assertEqual(q["available"], "0")
+
+    def test_preview_matches_actual_settlement(self):
+        for verdict in ("SELLER_WINS", "SPLIT", "BUYER_WINS"):
+            for confirm in (True, False):
+                with self.subTest(verdict=verdict, confirm=confirm):
+                    self.setUp()
+                    did = self.disputed(4, confirm=confirm)
+                    pre = self.view("preview_outcomes", did)
+                    self.assertFalse(pre["settled"])
+                    self.assertEqual(pre["needs_payment_review"], not confirm)
+                    self.verdicts = [verdict]
+                    self.ch.advance(49 * UNIT)
+                    self.call(OTHER, "resolve_dispute", did)
+                    d = self.view("get_deal", did)
+                    if d["status"] != "RESOLVED":
+                        continue
+                    o = pre["outcomes"][verdict]
+                    self.assertEqual(o["buyer_receives"], d["compensation"])
+                    self.assertEqual(o["fee"], d["fee"])
+                    self.assertEqual(o["vendor_pays"], d["paid_vendor"])
+                    self.assertEqual(o["group_pays"], d["paid_group"])
+                    self.assertTrue(o["covered"])
+
+    def test_preview_marks_cap_for_silent_vendor(self):
+        did = self.bound(4, confirm=False)
+        pre = self.view("preview_outcomes", did)
+        self.assertEqual(pre["bound_by"], "timeout")
+        self.assertEqual(pre["cap_bps"], 2500)
+        self.assertTrue(pre["outcomes"]["BUYER_WINS"]["capped"])
+        self.assertEqual(pre["outcomes"]["BUYER_WINS"]["buyer_receives"], str(GEN))
+
+    def test_preview_before_binding_assumes_seller_confirmation(self):
+        self.setup_market()
+        did = self.deal(4)
+        pre = self.view("preview_outcomes", did)
+        self.assertTrue(pre["assumed"])
+        self.assertEqual(pre["outcomes"]["BUYER_WINS"]["buyer_receives"], str(4 * GEN))
+        self.assertEqual(self.ch.call(OWNER, "preview_outcomes", "deal_99"), "")
+
+
 if __name__ == "__main__":
     unittest.main()

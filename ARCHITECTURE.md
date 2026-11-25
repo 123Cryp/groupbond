@@ -36,6 +36,10 @@ Silent-bound deals with a buyer-favourable ruling go to PAYOUT_PENDING for 7 day
 - Evidence is frozen with a sha256 digest, capped at 3 pieces per side, https links only.
 - The judge prompt wraps untrusted text in `<DATA>` markers with angle brackets neutralised, uses a fixed rubric, and accepts only valid JSON with an allowed verdict. Group membership or admin vouching is not evidence.
 
+## Previews (v1.1)
+
+Two read-only views let a UI show the money before it moves. `quote(vendor, protect_amount)` returns the vendor lock, group lock and worst-case total for a listing, or the exact reason `create_deal` would refuse it. `preview_outcomes(deal_id)` returns buyer payment, fee, vendor-lock share and group-pool share for each of the three rulings, with the 25% silence cap applied when the vendor never confirmed payment. Both use the same arithmetic as `_settle`, and tests compare the preview with the real settlement for every ruling. They change no state.
+
 ## GenVM notes
 
 Header lines are exactly the version line and the Depends line. No comments or docstrings in the contract. Collections are class-level annotations and never assigned in `__init__`. Views return JSON strings.

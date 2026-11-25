@@ -18,6 +18,12 @@ A group admin locks a GEN pool and approves vendors. Each vendor posts their own
 - `tests/` - offline test suite with a small GenLayer stub (no network, no pip)
 - `ARCHITECTURE.md` - state machine, economics, limits
 
+## v1.1: previews
+
+- `quote(vendor, protect_amount)` shows the locks a listing would take, or why the contract would refuse it. The vendor page calls it while you type.
+- `preview_outcomes(deal_id)` shows what each ruling would pay. The deal page shows it as "What each ruling would pay".
+- The Base port does not have these views yet.
+
 ## Run the tests
 
     python3 -m unittest discover -s tests -t tests
