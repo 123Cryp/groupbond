@@ -52,7 +52,7 @@ Open `frontend/base.html?contract=ADDRESS&chain=sepolia` (or `chain=base`). The 
 - Group handles and invite links are self-declared labels, not verified.
 - Validators are language models and can be wrong. No appeal in v1.
 - Links are never opened by validators.
-- Run on a live Studio deployment (testnet variant): two deals, one ending in a SPLIT verdict, all transactions accepted. The offline stub tests cover the rest.
+- Run on a live Studio deployment of v1.1 (testnet variant): two deals, one completed and one ending in a BUYER_WINS ruling, 17 transactions accepted, accounting balanced at 33 GEN. The offline stub tests cover the rest.
 - The Solidity contract was compiled and tested only through the Foundry workflow (111 tests passing). It has not been deployed to Base or Base Sepolia yet.
 - On Base the arbiter is trusted. Nothing on-chain forces it to rule fairly; a timeout lets anyone close a stalled dispute with no payout.
 
